@@ -13,7 +13,8 @@
 
 ## 🛠️ Tech Stack
 
-* **Backend**: Java 21, Spring Boot 4.0.4
+* **Backend**: Java 21
+* **Framework**: Spring Boot 4.0.4
 * **Security**: Spring Security, JWT (jjwt), OAuth2
 * **Database**: MySQL
 * **Communication**: JavaMail Sender for password recovery
@@ -26,14 +27,14 @@ To ensure fair play, the system verifies handles using the following flow:
 2.  **External Confirmation**: The application calls the **Codeforces user.info API** to check if the user's `firstName` matches the generated token.
 3.  **Sync**: Once verified, the user's actual rating and rank are synchronized with the platform.
 
-### Rating Calculation Logic
-The `RoomService` determines the competition level by:
-* Averaging the ratings of all verified participants.
-* Rounding the average to the nearest 100-point difficulty tier used by Codeforces.
+### Smart Problem Selection Algorithm
+The `RoomService` determines the competition level by analyzing verified participant data:
+* **Average-Based Matchmaking**: The system aggregates the ratings of all verified participants in a room to find a fair middle ground.
+* **Adaptive Difficulty Logic**: It calculates a problem rating by adding a +100 point difficulty buffer to the room's average rating and rounding to the nearest 100-point tier (e.g., an average rating of 1340 results in a 1400-rated problem).
+* **Rating Bounds**: The system includes logic to cap problem difficulty at a maximum of 3000.
 
 ## 🛤️ Roadmap (In Progress)
 
-* **Problem Picking**: Automating the fetch of specific problems from the Codeforces API matching the calculated room rating.
 * **WebSocket Integration**: Real-time chat and live leaderboards for active rooms.
 * **Match History**: Persistent records of previous contests and room outcomes.
 * **Code Submission & Judging**: Real-time tracking of problem status directly within the arena.
@@ -46,7 +47,7 @@ The `RoomService` determines the competition level by:
     * `GITHUB_CLIENT`, `GITHUB_SECRET`
     * `GOOGLE_CLIENT`, `GOOGLE_SECRET`
 2.  **Build & Run**:
-    ```bash
-    ./mvnw clean install
-    ./mvnw spring-boot:run
+    ```
+    .mvn clean install
+    .mvn spring-boot:run
     ```
