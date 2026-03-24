@@ -92,6 +92,10 @@ public class User{
     public int hashCode() {
         return getClass().hashCode();
     }
+
+    private String codeforcesHandle;
+    private boolean codeforcesVerified = false;
+    private String codeforcesVerificationToken;
 }
 
 
