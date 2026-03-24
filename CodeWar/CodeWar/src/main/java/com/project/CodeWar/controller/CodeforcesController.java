@@ -1,5 +1,6 @@
 package com.project.CodeWar.controller;
 
+import com.project.CodeWar.dtos.CfUser;
 import com.project.CodeWar.security.util.AuthUtil;
 import com.project.CodeWar.service.CodeforcesService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +75,24 @@ public class CodeforcesController {
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/rating/user/{userId}")
+    public ResponseEntity<?> getUserRatingByUserId(@PathVariable Long userId) {
+        try {
+            CfUser cfUser = codeforcesService.getUserRatingByUserId(userId);
+            return ResponseEntity.ok(Map.of(
+                    "userId", userId,
+                    "handle", cfUser.getHandle(),
+                    "rating", cfUser.getRating() != null ? cfUser.getRating() : "Unrated",
+                    "rank", cfUser.getRank() != null ? cfUser.getRank() : "Unrated",
+                    "maxRating", cfUser.getMaxRating() != null ? cfUser.getMaxRating() : "Unrated",
+                    "maxRank", cfUser.getMaxRank() != null ? cfUser.getMaxRank() : "Unrated"
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", e.getMessage()));
         }
     }

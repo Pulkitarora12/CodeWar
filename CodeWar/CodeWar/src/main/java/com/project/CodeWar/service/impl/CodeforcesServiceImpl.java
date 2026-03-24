@@ -1,6 +1,7 @@
 package com.project.CodeWar.service.impl;
 
 import com.project.CodeWar.dtos.CfApiResponse;
+import com.project.CodeWar.dtos.CfUser;
 import com.project.CodeWar.entity.User;
 import com.project.CodeWar.repository.UserRepository;
 import com.project.CodeWar.service.CodeforcesService;
@@ -97,5 +98,37 @@ public class CodeforcesServiceImpl implements CodeforcesService {
         userRepository.save(user);
 
         logger.info("CF handle unlinked successfully for userId: {}", userId);
+    }
+
+    @Override
+    public CfUser getUserRating(String handle) {
+        logger.info("Fetching rating for handle: {}", handle);
+
+        CfApiResponse response = restTemplate.getForObject(CF_API_URL + handle, CfApiResponse.class);
+
+        if (response == null || !"OK".equals(response.getStatus()) || response.getResult().isEmpty()) {
+            logger.error("CF API returned invalid response for handle: {}", handle);
+            throw new RuntimeException("Could not fetch Codeforces profile for handle: " + handle);
+        }
+
+        CfUser cfUser = response.getResult().get(0);
+        logger.info("Fetched rating for handle: {} — rating: {}, rank: {}", handle, cfUser.getRating(), cfUser.getRank());
+        return cfUser;
+    }
+
+    @Override
+    public CfUser getUserRatingByUserId(Long userId) {
+        logger.info("Fetching CF rating for userId: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getCodeforcesHandle() == null || !user.isCodeforcesVerified()) {
+            logger.warn("User {} has no verified CF handle", userId);
+            throw new RuntimeException("User has no verified Codeforces handle");
+        }
+
+        logger.info("Found verified handle: {} for userId: {}", user.getCodeforcesHandle(), userId);
+        return getUserRating(user.getCodeforcesHandle());
     }
 }

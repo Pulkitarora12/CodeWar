@@ -8,4 +8,8 @@ import lombok.Data;
 public class CfUser {
     private String handle;
     private String firstName;
+    private Integer rating;
+    private String rank;
+    private Integer maxRating;
+    private String maxRank;
 }
