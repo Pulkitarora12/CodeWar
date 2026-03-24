@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: CodeWar
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/${DB_NAME}
+    username: ${DB_USERNAME}  # Default is usually 'root'
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update         # Automatically creates/updates tables based on your Java entities
+    show-sql: true             # Useful for debugging; shows the queries in your console
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+  app:
+    jwtSecret: ${JWT_SECRET}
+    jwtExpirationMs: ${JWT_EXPIRATION}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${EMAIL}
+    password: ${EMAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT}
+            client-secret: ${GITHUB_SECRET}
+            scope: read:user, user:email
+          google:
+            client-id: ${GOOGLE_CLIENT}
+            client-secret: ${GOOGLE_SECRET}
+
+frontend:
+  url: http://localhost:3000
+
+server:
+  port: 8080
