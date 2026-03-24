@@ -133,14 +133,8 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
         User user = userService.findByEmail(email).orElseThrow( () -> new RuntimeException("User not found"));
         authorities.add(new SimpleGrantedAuthority(user.getRole().getRoleName().name()));
 
-        UserDetailsImpl userDetails = new UserDetailsImpl(
-                null,
-                username,
-                email,
-                null,
-                false,
-                authorities
-        );
+        UserDetailsImpl userDetails = new
+                UserDetailsImpl(null, username, email, null, false, true, true, true, true, authorities);
 
         String jwtToken = jwtUtils.generateTokenFromUsername(userDetails);
 
