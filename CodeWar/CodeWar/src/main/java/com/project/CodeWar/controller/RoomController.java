@@ -2,9 +2,12 @@ package com.project.CodeWar.controller;
 
 import com.project.CodeWar.dtos.CfUser;
 import com.project.CodeWar.entity.Room;
+import com.project.CodeWar.entity.RoomProblem;
 import com.project.CodeWar.entity.RoomStatus;
 import com.project.CodeWar.entity.User;
+import com.project.CodeWar.repository.RoomProblemRepository;
 import com.project.CodeWar.security.util.AuthUtil;
+import com.project.CodeWar.service.ProblemService;
 import com.project.CodeWar.service.RoomService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +31,12 @@ public class RoomController {
 
     @Autowired
     private AuthUtil authUtil;
+
+    @Autowired
+    private ProblemService problemService;
+
+    @Autowired
+    private RoomProblemRepository roomProblemRepository;
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -136,6 +145,67 @@ public class RoomController {
             return ResponseEntity.ok(Map.of(
                     "roomCode", roomCode,
                     "problemRating", problemRating
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{roomCode}/pick-problem")
+    public ResponseEntity<?> pickProblem(@PathVariable String roomCode) {
+        try {
+            RoomProblem problem = problemService.pickProblemForRoom(roomCode);
+            return ResponseEntity.ok(Map.of(
+                    "problemName", problem.getProblemName(),
+                    "contestId", problem.getContestId(),
+                    "problemIndex", problem.getProblemIndex(),
+                    "rating", problem.getRating(),
+                    "problemUrl", problem.getProblemUrl(),
+                    "assignedAt", problem.getAssignedAt()
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{roomCode}/problems")
+    public ResponseEntity<?> getRoomProblems(@PathVariable String roomCode) {
+        try {
+            Room room = roomService.getRoomByCode(roomCode);
+            List<RoomProblem> problems = roomProblemRepository.findByRoom(room);
+            return ResponseEntity.ok(Map.of(
+                    "roomCode", roomCode,
+                    "problems", problems.stream().map(p -> Map.of(
+                            "problemName", p.getProblemName(),
+                            "contestId", p.getContestId(),
+                            "problemIndex", p.getProblemIndex(),
+                            "rating", p.getRating(),
+                            "problemUrl", p.getProblemUrl(),
+                            "assignedAt", p.getAssignedAt()
+                    )).toList()
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{roomCode}/current-problem")
+    public ResponseEntity<?> getCurrentProblem(@PathVariable String roomCode) {
+        try {
+            Room room = roomService.getRoomByCode(roomCode);
+            RoomProblem problem = roomProblemRepository
+                    .findTopByRoomOrderByAssignedAtDesc(room)
+                    .orElseThrow(() -> new RuntimeException("No problem assigned yet"));
+            return ResponseEntity.ok(Map.of(
+                    "problemName", problem.getProblemName(),
+                    "contestId", problem.getContestId(),
+                    "problemIndex", problem.getProblemIndex(),
+                    "rating", problem.getRating(),
+                    "problemUrl", problem.getProblemUrl(),
+                    "assignedAt", problem.getAssignedAt()
             ));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
