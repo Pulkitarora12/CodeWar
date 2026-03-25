@@ -8,6 +8,9 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import OAuth2Redirect from "./pages/OAuth2Redirect";
 import Dashboard from "./pages/Dashboard";
+import Join from "./pages/Join";
+import Room from "./pages/Room";
+import Profile from "./pages/Profile";
 import "./App.css";
 
 // Redirect logged-in users away from auth pages
@@ -33,6 +36,9 @@ function AppRoutes() {
 
           {/* Protected routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/join" element={<ProtectedRoute><Join /></ProtectedRoute>} />
+          <Route path="/room/:roomCode" element={<ProtectedRoute><Room /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/login" replace />} />

@@ -24,6 +24,9 @@ const Navbar = () => {
               <Link to="/dashboard" className="nav-link">
                 Dashboard
               </Link>
+              <Link to="/profile" className="nav-link">
+                Profile
+              </Link>
               <div className="nav-user-section">
                 <span className="nav-username">{user.username || user.userName}</span>
                 <button onClick={handleLogout} className="btn btn-outline btn-sm">
