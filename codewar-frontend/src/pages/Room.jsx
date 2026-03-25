@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getRoom, updateRoomStatus } from "../api/room";
+import { getRoom, updateRoomStatus, getRoomRatings, getCurrentProblem, pickProblem } from "../api/room";
 import { useAuth } from "../context/AuthContext";
 import ParticipantList from "../components/ParticipantList";
 
@@ -9,6 +9,8 @@ const Room = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [room, setRoom] = useState(null);
+  const [cfRatings, setCfRatings] = useState([]);
+  const [currentProblem, setCurrentProblem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -18,6 +20,17 @@ const Room = () => {
     try {
       const res = await getRoom(roomCode);
       setRoom(res.data);
+      
+      // Fetch ratings independently (doesn't block room render if it fails)
+      getRoomRatings(roomCode)
+        .then(r => setCfRatings(r.data.participants || []))
+        .catch(() => setCfRatings([]));
+        
+      // Fetch current problem independently
+      getCurrentProblem(roomCode)
+        .then(r => setCurrentProblem(r.data))
+        .catch(() => setCurrentProblem(null));
+        
     } catch (err) {
       setError(err.response?.data?.message || "Room not found.");
     } finally {
@@ -36,6 +49,19 @@ const Room = () => {
       await fetchRoom();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update status.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handlePickProblem = async () => {
+    setActionLoading(true);
+    setError("");
+    try {
+      const res = await pickProblem(roomCode);
+      setCurrentProblem(res.data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to pick problem.");
     } finally {
       setActionLoading(false);
     }
@@ -118,6 +144,7 @@ const Room = () => {
           <ParticipantList
             participants={room?.participants || []}
             createdBy={room?.createdBy}
+            cfRatings={cfRatings}
           />
         </div>
 
@@ -150,6 +177,13 @@ const Room = () => {
                 <>
                   <button
                     className="btn btn-primary"
+                    onClick={handlePickProblem}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? <span className="spinner-sm" /> : "🎲 Pick Problem"}
+                  </button>
+                  <button
+                    className="btn btn-outline btn-danger"
                     onClick={() => handleStatusChange("COMPLETED")}
                     disabled={actionLoading}
                   >
@@ -160,6 +194,32 @@ const Room = () => {
               {status === "COMPLETED" && (
                 <p className="text-muted">This room has been closed. No more entries allowed.</p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Current Problem Display */}
+        {currentProblem && (
+          <div className="room-section problem-display">
+            <h2 className="room-section-title">
+              <span>⚔️</span> Active Problem
+            </h2>
+            <div className="problem-card">
+              <div className="problem-header">
+                <h3>{currentProblem.problemName}</h3>
+                <span className="badge badge-waiting">Rating: {currentProblem.rating || "N/A"}</span>
+              </div>
+              <p className="text-muted" style={{ marginBottom: "16px" }}>
+                Contest: {currentProblem.contestId} | Index: {currentProblem.problemIndex}
+              </p>
+              <a 
+                href={currentProblem.problemUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="btn btn-primary"
+              >
+                Go to Problem (Codeforces) ↗
+              </a>
             </div>
           </div>
         )}
