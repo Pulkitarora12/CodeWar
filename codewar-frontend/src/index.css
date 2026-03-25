@@ -1081,3 +1081,32 @@ a:hover {
     font-size: 1.4rem;
   }
 }
+
+.room-split-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.room-col-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.room-col-right {
+  width: 340px;        /* adjust to taste */
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Optional: stack on small screens */
+@media (max-width: 768px) {
+  .room-split-layout {
+    flex-direction: column;
+  }
+  .room-col-right {
+    width: 100%;
+  }
+}

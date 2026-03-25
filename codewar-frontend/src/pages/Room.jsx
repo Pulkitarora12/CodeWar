@@ -21,13 +21,13 @@ const Room = () => {
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [problemHistory, setProblemHistory] = useState([]);
 
   const fetchRoom = useCallback(async () => {
     try {
       const res = await getRoom(roomCode);
       setRoom(res.data);
 
-      // Fetch ratings independently (doesn't block room render if it fails)
       getRoomRatings(roomCode)
         .then((r) => {
           console.log("RATINGS API:", r.data);
@@ -35,7 +35,6 @@ const Room = () => {
         })
         .catch(() => setCfRatings([]));
 
-      // Fetch current problem independently
       getCurrentProblem(roomCode)
         .then((r) => setCurrentProblem(r.data))
         .catch(() => setCurrentProblem(null));
@@ -61,6 +60,18 @@ const Room = () => {
       setActionLoading(false);
     }
   };
+
+  const fetchProblemHistory = useCallback(async () => {
+    try {
+      const res = await getRoomProblems(roomCode);
+
+      // Backend already returns list → just store it
+      setProblemHistory(res.data.problems || []);
+    } catch (err) {
+      console.error("Failed to fetch problem history", err);
+      setProblemHistory([]);
+    }
+  }, [roomCode]);
 
   const handlePickProblem = async () => {
     setActionLoading(true);
@@ -127,25 +138,18 @@ const Room = () => {
           </div>
           <div className="room-header-actions">
             <span
-              className={`badge badge-lg ${status === "WAITING" ? "badge-waiting" : status === "IN_PROGRESS" ? "badge-active" : "badge-completed"}`}
+              className={`badge badge-lg ${
+                status === "WAITING"
+                  ? "badge-waiting"
+                  : status === "IN_PROGRESS"
+                    ? "badge-active"
+                    : "badge-completed"
+              }`}
             >
               {status === "IN_PROGRESS" ? "IN PROGRESS" : status}
             </span>
           </div>
         </div>
-
-        {/* Invite Link */}
-        {status === "WAITING" && (
-          <div className="invite-bar">
-            <div className="invite-link-display">
-              <span className="invite-label">Invite Link</span>
-              <code className="invite-code">{`${window.location.origin}/join?code=${roomCode}`}</code>
-            </div>
-            <button className="btn btn-outline btn-sm" onClick={copyInviteLink}>
-              {copied ? "✓ Copied!" : "📋 Copy"}
-            </button>
-          </div>
-        )}
       </div>
 
       {error && (
@@ -154,120 +158,218 @@ const Room = () => {
         </div>
       )}
 
-      <div className="room-body">
-        {/* Participants */}
-        <div className="room-section">
-          <h2 className="room-section-title">
-            <span>👥</span> Participants ({room?.participants?.length || 0})
-          </h2>
-          <ParticipantList
-            participants={room?.participants || []}
-            createdBy={room?.createdBy}
-            cfRatings={cfRatings}
-          />
-        </div>
+      {/* Two-Column Layout */}
+      <div className="room-split-layout">
+        {/* LEFT: Active Problem */}
+        <div className="room-col room-col-left">
+          {/* Active Problem */}
+          {currentProblem ? (
+            <div className="room-section problem-display">
+              <h2 className="room-section-title">
+                <span>⚔️</span> Active Problem
+              </h2>
 
-        {/* Host Controls */}
-        {isHost && (
+              <div className="problem-card">
+                <div className="problem-header">
+                  <h3>{currentProblem.problemName}</h3>
+                  <span className="badge badge-waiting">
+                    Rating: {currentProblem.rating || "N/A"}
+                  </span>
+                </div>
+
+                <p className="text-muted" style={{ marginBottom: "16px" }}>
+                  Contest: {currentProblem.contestId} | Index:{" "}
+                  {currentProblem.problemIndex}
+                </p>
+
+                <a
+                  href={currentProblem.problemUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                >
+                  Go to Problem (Codeforces) ↗
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="room-section problem-display problem-empty">
+              <h2 className="room-section-title">
+                <span>⚔️</span> Active Problem
+              </h2>
+              <p className="text-muted">No problem selected yet.</p>
+            </div>
+          )}
+
+          {/* Problem History */}
           <div className="room-section">
             <h2 className="room-section-title">
-              <span>⚙️</span> Room Controls
+              <span>📜</span> Problem History
             </h2>
-            <div className="room-controls">
-              {status === "WAITING" && (
-                <>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => handleStatusChange("IN_PROGRESS")}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? (
-                      <span className="spinner-sm" />
-                    ) : (
-                      "🚀 Start Battle"
-                    )}
-                  </button>
-                  <button
-                    className="btn btn-outline btn-danger"
-                    onClick={() => handleStatusChange("COMPLETED")}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? (
-                      <span className="spinner-sm" />
-                    ) : (
-                      "🔒 Close Entries"
-                    )}
-                  </button>
-                </>
-              )}
-              {status === "IN_PROGRESS" && (
-                <>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handlePickProblem}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? (
-                      <span className="spinner-sm" />
-                    ) : (
-                      "🎲 Pick Problem"
-                    )}
-                  </button>
-                  <button
-                    className="btn btn-outline btn-danger"
-                    onClick={() => handleStatusChange("COMPLETED")}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? (
-                      <span className="spinner-sm" />
-                    ) : (
-                      "🏁 Complete Room"
-                    )}
-                  </button>
-                </>
-              )}
-              {status === "COMPLETED" && (
-                <p className="text-muted">
-                  This room has been closed. No more entries allowed.
-                </p>
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* Current Problem Display */}
-        {currentProblem && (
-          <div className="room-section problem-display">
-            <h2 className="room-section-title">
-              <span>⚔️</span> Active Problem
-            </h2>
-            <div className="problem-card">
-              <div className="problem-header">
-                <h3>{currentProblem.problemName}</h3>
-                <span className="badge badge-waiting">
-                  Rating: {currentProblem.rating || "N/A"}
-                </span>
+            {problemHistory && problemHistory.length > 0 ? (
+              <div className="problem-history-list">
+                {problemHistory
+                  .slice()
+                  .reverse()
+                  .map((problem, index) => {
+                    const isActive =
+                      currentProblem &&
+                      problem.problemUrl === currentProblem.problemUrl;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`problem-card ${
+                          isActive ? "problem-active-highlight" : ""
+                        }`}
+                        style={{ marginBottom: "12px" }}
+                      >
+                        <div className="problem-header">
+                          <h3 style={{ fontSize: "16px" }}>
+                            {problem.problemName}
+                          </h3>
+
+                          <span
+                            className={`badge ${
+                              isActive ? "badge-active" : "badge-waiting"
+                            }`}
+                          >
+                            {isActive
+                              ? "ACTIVE"
+                              : `Rating: ${problem.rating || "N/A"}`}
+                          </span>
+                        </div>
+
+                        <p className="text-muted" style={{ fontSize: "13px" }}>
+                          Contest: {problem.contestId} | Index:{" "}
+                          {problem.problemIndex}
+                        </p>
+
+                        <a
+                          href={problem.problemUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline btn-sm"
+                          style={{ marginTop: "8px" }}
+                        >
+                          View Problem ↗
+                        </a>
+                      </div>
+                    );
+                  })}
               </div>
-              <p className="text-muted" style={{ marginBottom: "16px" }}>
-                Contest: {currentProblem.contestId} | Index:{" "}
-                {currentProblem.problemIndex}
-              </p>
-              <a
-                href={currentProblem.problemUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary"
-              >
-                Go to Problem (Codeforces) ↗
-              </a>
-            </div>
+            ) : (
+              <p className="text-muted">No problems attempted yet.</p>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* RIGHT: Participants + Controls + Invite Link */}
+        <div className="room-col room-col-right">
+          {/* Invite Link */}
+          {status === "WAITING" && (
+            <div className="room-section">
+              <h2 className="room-section-title">
+                <span>🔗</span> Invite Link
+              </h2>
+              <div className="invite-bar">
+                <div className="invite-link-display">
+                  <code className="invite-code">{`${roomCode}`}</code>
+                </div>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={copyInviteLink}
+                >
+                  {copied ? "✓ Copied!" : "📋 Copy"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Participants */}
+          <div className="room-section">
+            <h2 className="room-section-title">
+              <span>👥</span> Participants ({room?.participants?.length || 0})
+            </h2>
+            <ParticipantList
+              participants={room?.participants || []}
+              createdBy={room?.createdBy}
+              cfRatings={cfRatings}
+            />
+          </div>
+
+          {/* Host Controls */}
+          {isHost && (
+            <div className="room-section">
+              <h2 className="room-section-title">
+                <span>⚙️</span> Room Controls
+              </h2>
+              <div className="room-controls">
+                {status === "WAITING" && (
+                  <>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => handleStatusChange("IN_PROGRESS")}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? (
+                        <span className="spinner-sm" />
+                      ) : (
+                        "🚀 Start Battle"
+                      )}
+                    </button>
+                    <button
+                      className="btn btn-outline btn-danger"
+                      onClick={() => handleStatusChange("COMPLETED")}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? (
+                        <span className="spinner-sm" />
+                      ) : (
+                        "🔒 Close Entries"
+                      )}
+                    </button>
+                  </>
+                )}
+                {status === "IN_PROGRESS" && (
+                  <>
+                    <button
+                      className="btn btn-primary"
+                      onClick={handlePickProblem}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? (
+                        <span className="spinner-sm" />
+                      ) : (
+                        "🎲 Pick Problem"
+                      )}
+                    </button>
+                    <button
+                      className="btn btn-outline btn-danger"
+                      onClick={() => handleStatusChange("COMPLETED")}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? (
+                        <span className="spinner-sm" />
+                      ) : (
+                        "🏁 Complete Room"
+                      )}
+                    </button>
+                  </>
+                )}
+                {status === "COMPLETED" && (
+                  <p className="text-muted">
+                    This room has been closed. No more entries allowed.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="room-footer">
-        
-      </div>
+      <div className="room-footer" />
     </div>
   );
 };
