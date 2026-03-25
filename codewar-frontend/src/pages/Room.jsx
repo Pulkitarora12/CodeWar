@@ -6,6 +6,7 @@ import {
   getRoomRatings,
   getCurrentProblem,
   pickProblem,
+  getRoomProblems,
 } from "../api/room";
 import { useAuth } from "../context/AuthContext";
 import ParticipantList from "../components/ParticipantList";
@@ -29,15 +30,17 @@ const Room = () => {
       setRoom(res.data);
 
       getRoomRatings(roomCode)
-        .then((r) => {
-          console.log("RATINGS API:", r.data);
-          setCfRatings(r.data.participants || []);
-        })
+        .then((r) => setCfRatings(r.data.participants || []))
         .catch(() => setCfRatings([]));
 
       getCurrentProblem(roomCode)
         .then((r) => setCurrentProblem(r.data))
         .catch(() => setCurrentProblem(null));
+
+      // ✅ add this
+      getRoomProblems(roomCode)
+        .then((r) => setProblemHistory(r.data.problems || []))
+        .catch(() => setProblemHistory([]));
     } catch (err) {
       setError(err.response?.data?.message || "Room not found.");
     } finally {
@@ -61,24 +64,13 @@ const Room = () => {
     }
   };
 
-  const fetchProblemHistory = useCallback(async () => {
-    try {
-      const res = await getRoomProblems(roomCode);
-
-      // Backend already returns list → just store it
-      setProblemHistory(res.data.problems || []);
-    } catch (err) {
-      console.error("Failed to fetch problem history", err);
-      setProblemHistory([]);
-    }
-  }, [roomCode]);
-
   const handlePickProblem = async () => {
     setActionLoading(true);
     setError("");
     try {
       const res = await pickProblem(roomCode);
       setCurrentProblem(res.data);
+      await fetchRoom();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to pick problem.");
     } finally {
@@ -164,7 +156,10 @@ const Room = () => {
         <div className="room-col room-col-left">
           {/* Active Problem */}
           {currentProblem ? (
-            <div className="room-section problem-display">
+            <div
+              className="room-section problem-display problem-empty"
+              style={{ marginBottom: "32px" }}
+            >
               <h2 className="room-section-title">
                 <span>⚔️</span> Active Problem
               </h2>

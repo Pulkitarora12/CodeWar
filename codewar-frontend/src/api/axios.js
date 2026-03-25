@@ -20,17 +20,20 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor — handle 401 globally
+let isRedirecting = false;
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem("cw_token");
-      localStorage.removeItem("cw_user");
-      // Only redirect if not already on a public page
-      const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password"];
-      if (!publicPaths.some((p) => window.location.pathname.startsWith(p))) {
-        window.location.href = "/login";
+      if (!isRedirecting) {
+        isRedirecting = true;
+        localStorage.removeItem("cw_token");
+        localStorage.removeItem("cw_user");
+        const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password"];
+        if (!publicPaths.some((p) => window.location.pathname.startsWith(p))) {
+          window.location.href = "/login";
+        }
       }
     }
     return Promise.reject(error);
