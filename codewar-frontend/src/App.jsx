@@ -1,19 +1,54 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "./assets/vite.svg";
-import heroImg from "./assets/hero.png";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import Navbar from "./components/Navbar";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import OAuth2Redirect from "./pages/OAuth2Redirect";
+import Dashboard from "./pages/Dashboard";
 import "./App.css";
+
+// Redirect logged-in users away from auth pages
+const PublicRoute = ({ children }) => {
+  const { token, loading } = useAuth();
+  if (loading) return <div className="page-center"><div className="spinner" /></div>;
+  if (token) return <Navigate to="/dashboard" replace />;
+  return children;
+};
+
+function AppRoutes() {
+  return (
+    <>
+      <Navbar />
+      <main className="main-content">
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/oauth2/redirect" element={<OAuth2Redirect />} />
+
+          {/* Protected routes */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </main>
+    </>
+  );
+}
 
 function App() {
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-900">
-      <h1
-        className="text-4xl font-bold text-white"
-        style={{ fontFamily: "Georgia, serif" }}
-      >
-        CodeWar 🔥
-      </h1>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
