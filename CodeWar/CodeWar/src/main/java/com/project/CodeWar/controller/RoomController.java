@@ -127,7 +127,7 @@ public class RoomController {
     @GetMapping("/{roomCode}/ratings")
     public ResponseEntity<?> getRoomRatings(@PathVariable String roomCode) {
         try {
-            List<CfUser> ratings = roomService.getRoomParticipantsRatings(roomCode);
+            List<Map<String, Object>> ratings = roomService.getRoomParticipantsRatings(roomCode);
             return ResponseEntity.ok(Map.of(
                     "roomCode", roomCode,
                     "participants", ratings

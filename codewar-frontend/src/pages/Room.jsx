@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getRoom, updateRoomStatus, getRoomRatings, getCurrentProblem, pickProblem } from "../api/room";
+import {
+  getRoom,
+  updateRoomStatus,
+  getRoomRatings,
+  getCurrentProblem,
+  pickProblem,
+} from "../api/room";
 import { useAuth } from "../context/AuthContext";
 import ParticipantList from "../components/ParticipantList";
 
@@ -20,17 +26,19 @@ const Room = () => {
     try {
       const res = await getRoom(roomCode);
       setRoom(res.data);
-      
+
       // Fetch ratings independently (doesn't block room render if it fails)
       getRoomRatings(roomCode)
-        .then(r => setCfRatings(r.data.participants || []))
+        .then((r) => {
+          console.log("RATINGS API:", r.data);
+          setCfRatings(r.data.participants || []);
+        })
         .catch(() => setCfRatings([]));
-        
+
       // Fetch current problem independently
       getCurrentProblem(roomCode)
-        .then(r => setCurrentProblem(r.data))
+        .then((r) => setCurrentProblem(r.data))
         .catch(() => setCurrentProblem(null));
-        
     } catch (err) {
       setError(err.response?.data?.message || "Room not found.");
     } finally {
@@ -87,7 +95,11 @@ const Room = () => {
       <div className="page-center">
         <div className="auth-card" style={{ textAlign: "center" }}>
           <div className="alert alert-error">{error}</div>
-          <button className="btn btn-outline" onClick={() => navigate("/dashboard")} style={{ marginTop: 16 }}>
+          <button
+            className="btn btn-outline"
+            onClick={() => navigate("/dashboard")}
+            style={{ marginTop: 16 }}
+          >
             Back to Dashboard
           </button>
         </div>
@@ -95,7 +107,8 @@ const Room = () => {
     );
   }
 
-  const isHost = user?.username === room?.createdBy || user?.userName === room?.createdBy;
+  const isHost =
+    user?.username === room?.createdBy || user?.userName === room?.createdBy;
   const status = room?.status || "WAITING";
 
   return (
@@ -113,7 +126,9 @@ const Room = () => {
             </p>
           </div>
           <div className="room-header-actions">
-            <span className={`badge badge-lg ${status === "WAITING" ? "badge-waiting" : status === "IN_PROGRESS" ? "badge-active" : "badge-completed"}`}>
+            <span
+              className={`badge badge-lg ${status === "WAITING" ? "badge-waiting" : status === "IN_PROGRESS" ? "badge-active" : "badge-completed"}`}
+            >
               {status === "IN_PROGRESS" ? "IN PROGRESS" : status}
             </span>
           </div>
@@ -133,7 +148,11 @@ const Room = () => {
         )}
       </div>
 
-      {error && <div className="alert alert-error" style={{ marginBottom: 20 }}>{error}</div>}
+      {error && (
+        <div className="alert alert-error" style={{ marginBottom: 20 }}>
+          {error}
+        </div>
+      )}
 
       <div className="room-body">
         {/* Participants */}
@@ -162,14 +181,22 @@ const Room = () => {
                     onClick={() => handleStatusChange("IN_PROGRESS")}
                     disabled={actionLoading}
                   >
-                    {actionLoading ? <span className="spinner-sm" /> : "🚀 Start Battle"}
+                    {actionLoading ? (
+                      <span className="spinner-sm" />
+                    ) : (
+                      "🚀 Start Battle"
+                    )}
                   </button>
                   <button
                     className="btn btn-outline btn-danger"
                     onClick={() => handleStatusChange("COMPLETED")}
                     disabled={actionLoading}
                   >
-                    {actionLoading ? <span className="spinner-sm" /> : "🔒 Close Entries"}
+                    {actionLoading ? (
+                      <span className="spinner-sm" />
+                    ) : (
+                      "🔒 Close Entries"
+                    )}
                   </button>
                 </>
               )}
@@ -180,19 +207,29 @@ const Room = () => {
                     onClick={handlePickProblem}
                     disabled={actionLoading}
                   >
-                    {actionLoading ? <span className="spinner-sm" /> : "🎲 Pick Problem"}
+                    {actionLoading ? (
+                      <span className="spinner-sm" />
+                    ) : (
+                      "🎲 Pick Problem"
+                    )}
                   </button>
                   <button
                     className="btn btn-outline btn-danger"
                     onClick={() => handleStatusChange("COMPLETED")}
                     disabled={actionLoading}
                   >
-                    {actionLoading ? <span className="spinner-sm" /> : "🏁 Complete Room"}
+                    {actionLoading ? (
+                      <span className="spinner-sm" />
+                    ) : (
+                      "🏁 Complete Room"
+                    )}
                   </button>
                 </>
               )}
               {status === "COMPLETED" && (
-                <p className="text-muted">This room has been closed. No more entries allowed.</p>
+                <p className="text-muted">
+                  This room has been closed. No more entries allowed.
+                </p>
               )}
             </div>
           </div>
@@ -207,15 +244,18 @@ const Room = () => {
             <div className="problem-card">
               <div className="problem-header">
                 <h3>{currentProblem.problemName}</h3>
-                <span className="badge badge-waiting">Rating: {currentProblem.rating || "N/A"}</span>
+                <span className="badge badge-waiting">
+                  Rating: {currentProblem.rating || "N/A"}
+                </span>
               </div>
               <p className="text-muted" style={{ marginBottom: "16px" }}>
-                Contest: {currentProblem.contestId} | Index: {currentProblem.problemIndex}
+                Contest: {currentProblem.contestId} | Index:{" "}
+                {currentProblem.problemIndex}
               </p>
-              <a 
-                href={currentProblem.problemUrl} 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <a
+                href={currentProblem.problemUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn btn-primary"
               >
                 Go to Problem (Codeforces) ↗
@@ -226,9 +266,7 @@ const Room = () => {
       </div>
 
       <div className="room-footer">
-        <button className="btn btn-outline" onClick={() => navigate("/dashboard")}>
-          ← Back to Dashboard
-        </button>
+        
       </div>
     </div>
   );

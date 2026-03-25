@@ -23,10 +23,14 @@ const ParticipantList = ({ participants = [], createdBy, cfRatings = [] }) => {
     <div className="participant-list">
       {participants.map((name, idx) => {
         // Find matching CF user by handle (since backend doesn't return userId in cfRatings)
-        const cfUser = cfRatings.find(cf => cf.handle.toLowerCase() === name.toLowerCase());
+        const cfUser = cfRatings.find((cf) => cf.username === name);
 
         return (
-          <div key={idx} className="participant-item" style={{ display: "flex", justifyContent: "space-between" }}>
+          <div
+            key={idx}
+            className="participant-item"
+            style={{ display: "flex", justifyContent: "space-between" }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div className="participant-avatar">
                 {name.charAt(0).toUpperCase()}
@@ -38,12 +42,21 @@ const ParticipantList = ({ participants = [], createdBy, cfRatings = [] }) => {
                 )}
               </span>
             </div>
-            
+
             {cfUser && (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "0.75rem", textTransform: "uppercase", fontWeight: "600", color: "var(--text-muted)" }}>Rating</span>
-                <span style={{ fontSize: "0.95rem", fontWeight: "700", color: getRankColor(cfUser.rank) }}>
-                  {cfUser.rating || "Unrated"}
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <span style={{ fontSize: "0.75rem", fontWeight: "600" }}>
+                  Rating
+                </span>
+                <span
+                  style={{
+                    fontWeight: "700",
+                    color: getRankColor(cfUser?.rank),
+                  }}
+                >
+                  {cfUser?.rating ?? "Unrated"}
                 </span>
               </div>
             )}

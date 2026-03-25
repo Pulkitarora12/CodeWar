@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -126,23 +127,29 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public List<CfUser> getRoomParticipantsRatings(String roomCode) {
-        logger.info("Fetching ratings for all participants in room: {}", roomCode);
+    public List<Map<String, Object>> getRoomParticipantsRatings(String roomCode) {
 
         Room room = roomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new RuntimeException("Room not found"));
 
-        List<CfUser> ratings = new ArrayList<>();
+        List<Map<String, Object>> ratings = new ArrayList<>();
 
         for (User participant : room.getParticipants()) {
             try {
                 CfUser cfUser = codeforcesService.getUserRatingByUserId(participant.getUserId());
-                ratings.add(cfUser);
-                logger.info("Fetched rating for participant: {} — rating: {}",
-                        participant.getUserName(), cfUser.getRating());
+
+                ratings.add(Map.of(
+                        "username", participant.getUserName(),
+                        "rating", cfUser.getRating(),
+                        "rank", cfUser.getRank()
+                ));
+
             } catch (Exception e) {
-                logger.warn("Could not fetch rating for participant: {} — {}",
-                        participant.getUserName(), e.getMessage());
+                ratings.add(Map.of(
+                        "username", participant.getUserName(),
+                        "rating", 0,
+                        "rank", 0
+                ));
             }
         }
 

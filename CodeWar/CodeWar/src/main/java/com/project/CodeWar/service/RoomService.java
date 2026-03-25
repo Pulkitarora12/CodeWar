@@ -5,6 +5,7 @@ import com.project.CodeWar.entity.Room;
 import com.project.CodeWar.entity.RoomStatus;
 
 import java.util.List;
+import java.util.Map;
 
 public interface RoomService {
     Room createRoom(Long userId);
@@ -12,6 +13,6 @@ public interface RoomService {
     Room getRoomByCode(String roomCode);
     List<Room> getRoomsByUser(Long userId);
     void updateRoomStatus(String roomCode, Long userId, RoomStatus status);
-    List<CfUser> getRoomParticipantsRatings(String roomCode);
+    List<Map<String, Object>> getRoomParticipantsRatings(String roomCode);
     int calculateProblemRating(String roomCode);
 }

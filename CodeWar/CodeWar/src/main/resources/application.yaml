@@ -45,7 +45,7 @@ spring:
               - profile
 
 frontend:
-  url: http://localhost:5174
+  url: http://localhost:3000
 
 server:
   port: 8080
