@@ -14,7 +14,7 @@ public interface ContestRepository extends JpaRepository<Contest, Long> {
 
     Optional<Contest> findByRoom(Room room);
 
-    Optional<Contest> findByRoomCode(String roomCode);
+    Optional<Contest> findByRoomRoomCode(String roomCode);
 
     List<Contest> findByStatus(ContestStatus status);
 }
