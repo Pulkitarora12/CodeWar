@@ -1,6 +1,8 @@
 package com.project.CodeWar.service.impl;
 
 import com.project.CodeWar.dtos.CfApiResponse;
+import com.project.CodeWar.dtos.CfSubmission;
+import com.project.CodeWar.dtos.CfSubmissionResponse;
 import com.project.CodeWar.dtos.CfUser;
 import com.project.CodeWar.entity.User;
 import com.project.CodeWar.repository.UserRepository;
@@ -11,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -24,6 +27,9 @@ public class CodeforcesServiceImpl implements CodeforcesService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     private static final String CF_API_URL = "https://codeforces.com/api/user.info?handles=";
+
+    private static final String CF_USER_STATUS_URL = "https://codeforces.com/api/user.status?handle={handle}&from=1&count={count}";
+
 
     @Override
     public String generateVerificationToken(Long userId, String handle) {
@@ -130,5 +136,24 @@ public class CodeforcesServiceImpl implements CodeforcesService {
 
         logger.info("Found verified handle: {} for userId: {}", user.getCodeforcesHandle(), userId);
         return getUserRating(user.getCodeforcesHandle());
+    }
+
+    @Override
+    public List<CfSubmission> getRecentSubmissions(String handle, int count) {
+        logger.info("Fetching last {} submissions for handle: {}", count, handle);
+
+        CfSubmissionResponse response = restTemplate.getForObject(
+                CF_USER_STATUS_URL,
+                CfSubmissionResponse.class,
+                handle, count
+        );
+
+        if (response == null || !"OK".equals(response.getStatus())) {
+            logger.error("CF API returned invalid response for handle: {}", handle);
+            throw new RuntimeException("Could not fetch submissions for handle: " + handle);
+        }
+
+        logger.info("Fetched {} submissions for handle: {}", response.getResult().size(), handle);
+        return response.getResult();
     }
 }
