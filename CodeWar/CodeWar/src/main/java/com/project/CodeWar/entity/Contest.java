@@ -31,6 +31,6 @@ public class Contest {
     private LocalDateTime endTime;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private ContestStatus status = ContestStatus.ACTIVE;
 }

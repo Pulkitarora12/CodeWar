@@ -34,7 +34,7 @@ public class Submission {
     @Column(nullable = false)
     private boolean solved = false;
 
-    @CreationTimestamp
-    @Column(updatable = false)
+//    @CreationTimestamp
+//    @Column(updatable = false)
     private LocalDateTime submittedAt;
 }
