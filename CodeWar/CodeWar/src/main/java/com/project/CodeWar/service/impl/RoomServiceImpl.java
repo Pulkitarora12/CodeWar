@@ -190,7 +190,7 @@ public class RoomServiceImpl implements RoomService {
         }
 
         int avgRating = totalRating / count;
-        int problemRating = (int) (Math.round((avgRating + 100) / 100.0) * 100);
+        int problemRating = (int) (Math.round((avgRating) / 100.0) * 100);
         problemRating = Math.min(problemRating, 3000);
 
         logger.info("Avg rating: {}, Problem rating calculated: {}", avgRating, problemRating);

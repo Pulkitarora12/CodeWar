@@ -17,10 +17,6 @@ public class Contest {
     private Long id;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "room_id", nullable = false)
-    private Room room;
-
-    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "room_problem_id", nullable = false)
     private RoomProblem roomProblem;
 

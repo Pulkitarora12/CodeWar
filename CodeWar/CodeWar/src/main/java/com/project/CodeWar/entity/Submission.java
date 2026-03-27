@@ -3,15 +3,13 @@ package com.project.CodeWar.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Data
 @NoArgsConstructor
-@Table(name = "submissions",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"contest_id", "user_id"}))
+@Table(name = "submissions")
 public class Submission {
 
     @Id

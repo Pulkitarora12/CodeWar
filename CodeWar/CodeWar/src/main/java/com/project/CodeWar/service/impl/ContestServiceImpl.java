@@ -13,17 +13,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
+import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 @Service
 public class ContestServiceImpl implements ContestService {
 
     private static final Logger logger = LoggerFactory.getLogger(ContestServiceImpl.class);
+
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
 
     @Autowired
     private ContestRepository contestRepository;
@@ -55,6 +65,34 @@ public class ContestServiceImpl implements ContestService {
     @Value("${frontend.url}")
     private String frontendUrl;
 
+    @PostConstruct
+    public void reScheduleActiveContests() {
+        logger.info("App startup — checking for active contests to re-schedule");
+
+        List<Contest> activeContests = contestRepository.findByStatus(ContestStatus.ACTIVE);
+
+        if (activeContests.isEmpty()) {
+            logger.info("No active contests found on startup");
+            return;
+        }
+
+        for (Contest contest : activeContests) {
+            long remainingSeconds = Duration.between(LocalDateTime.now(), contest.getEndTime()).getSeconds();
+
+            if (remainingSeconds > 0) {
+                logger.info("Re-scheduling contestId: {} — {}s remaining", contest.getId(), remainingSeconds);
+                scheduleContestEnd(contest.getId(), remainingSeconds);
+            } else {
+                logger.info("ContestId: {} already expired on startup — ending now", contest.getId());
+                try {
+                    endContest(contest.getId());
+                } catch (Exception e) {
+                    logger.error("Failed to end expired contestId: {} — {}", contest.getId(), e.getMessage());
+                }
+            }
+        }
+    }
+
     @Override
     public Map<String, Object> startContest(String roomCode) {
         logger.info("Starting contest for room: {}", roomCode);
@@ -63,7 +101,7 @@ public class ContestServiceImpl implements ContestService {
                 .orElseThrow(() -> new RuntimeException("Room not found"));
 
         // check no active contest already exists
-        Optional<Contest> existing = contestRepository.findByRoomAndStatus(room, ContestStatus.ACTIVE);
+        Optional<Contest> existing = contestRepository.findByRoomProblem_RoomAndStatus(room, ContestStatus.ACTIVE);
         if (existing.isPresent()) {
             throw new RuntimeException("An active contest already exists for this room");
         }
@@ -77,11 +115,12 @@ public class ContestServiceImpl implements ContestService {
         LocalDateTime endTime = startTime.plusMinutes(30);
 
         Contest contest = new Contest();
-        contest.setRoom(room);
         contest.setRoomProblem(roomProblem);
         contest.setStartTime(startTime);
         contest.setEndTime(endTime);
         contest.setStatus(ContestStatus.ACTIVE);
+        contestRepository.save(contest);
+
         contestRepository.save(contest);
 
         // update room status
@@ -194,7 +233,7 @@ public class ContestServiceImpl implements ContestService {
         }
 
         // assign score=0 to all participants who didn't solve
-        List<User> participants = contest.getRoom().getParticipants();
+        List<User> participants = contest.getRoomProblem().getRoom().getParticipants();
 
         for (User participant : participants) {
             Optional<Score> existingScore = scoreRepository.findByContestAndUser(contest, participant);
@@ -217,12 +256,24 @@ public class ContestServiceImpl implements ContestService {
                 .orElse(new Score());
 
         scoreEntity.setContest(contest);
-        scoreEntity.setRoom(contest.getRoom());
+        scoreEntity.setRoom(contest.getRoomProblem().getRoom());
         scoreEntity.setUser(user);
         scoreEntity.setScore(score);
         scoreRepository.save(scoreEntity);
 
         logger.info("Score saved — user: {}, contestId: {}, score: {}",
                 user.getUserName(), contest.getId(), score);
+    }
+
+    private void scheduleContestEnd(Long contestId, long delaySeconds) {
+        logger.info("Scheduling auto-end for contestId: {} after {}s", contestId, delaySeconds);
+        scheduler.schedule(() -> {
+            try {
+                logger.info("Auto-ending contestId: {}", contestId);
+                endContest(contestId);
+            } catch (Exception e) {
+                logger.error("Failed to auto-end contestId: {} — {}", contestId, e.getMessage());
+            }
+        }, delaySeconds, TimeUnit.SECONDS);
     }
 }
