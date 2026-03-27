@@ -4,10 +4,8 @@ import {
   getRoom,
   updateRoomStatus,
   getRoomRatings,
-  getCurrentProblem,
-  pickProblem,
-  getRoomProblems,
 } from "../api/room";
+import { startContest, getContestsByRoom } from "../api/contest";
 import { useAuth } from "../context/AuthContext";
 import ParticipantList from "../components/ParticipantList";
 
@@ -17,12 +15,12 @@ const Room = () => {
   const navigate = useNavigate();
   const [room, setRoom] = useState(null);
   const [cfRatings, setCfRatings] = useState([]);
-  const [currentProblem, setCurrentProblem] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [problemHistory, setProblemHistory] = useState([]);
+  const [contests, setContests] = useState([]);
 
   const fetchRoom = useCallback(async () => {
     try {
@@ -33,14 +31,10 @@ const Room = () => {
         .then((r) => setCfRatings(r.data.participants || []))
         .catch(() => setCfRatings([]));
 
-      getCurrentProblem(roomCode)
-        .then((r) => setCurrentProblem(r.data))
-        .catch(() => setCurrentProblem(null));
-
       // ✅ add this
-      getRoomProblems(roomCode)
-        .then((r) => setProblemHistory(r.data.problems || []))
-        .catch(() => setProblemHistory([]));
+      getContestsByRoom(roomCode)
+        .then((r) => setContests(r.data || []))
+        .catch(() => setContests([]));
     } catch (err) {
       setError(err.response?.data?.message || "Room not found.");
     } finally {
@@ -64,19 +58,25 @@ const Room = () => {
     }
   };
 
-  const handlePickProblem = async () => {
+  const handleStartContest = async () => {
     setActionLoading(true);
     setError("");
     try {
-      const res = await pickProblem(roomCode);
-      setCurrentProblem(res.data);
-      await fetchRoom();
+      const res = await startContest(roomCode);
+      const contestId = res.data.contestId || res.data.id;
+      if (contestId) {
+        navigate(`/contest/${roomCode}/${contestId}`);
+      } else {
+        setError("Contest started but no ID returned.");
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to pick problem.");
+      setError(err.response?.data?.message || "Failed to start contest.");
     } finally {
       setActionLoading(false);
     }
   };
+
+
 
   const copyInviteLink = () => {
     const link = `${window.location.origin}/join?code=${roomCode}`;
@@ -152,110 +152,65 @@ const Room = () => {
 
       {/* Two-Column Layout */}
       <div className="room-split-layout">
-        {/* LEFT: Active Problem */}
+        {/* LEFT: Contest History */}
         <div className="room-col room-col-left">
-          {/* Active Problem */}
-          {currentProblem ? (
-            <div
-              className="room-section problem-display problem-empty"
-              style={{ marginBottom: "32px" }}
-            >
-              <h2 className="room-section-title">
-                <span>⚔️</span> Active Problem
-              </h2>
-
-              <div className="problem-card">
-                <div className="problem-header">
-                  <h3>{currentProblem.problemName}</h3>
-                  <span className="badge badge-waiting">
-                    Rating: {currentProblem.rating || "N/A"}
-                  </span>
-                </div>
-
-                <p className="text-muted" style={{ marginBottom: "16px" }}>
-                  Contest: {currentProblem.contestId} | Index:{" "}
-                  {currentProblem.problemIndex}
-                </p>
-
-                <a
-                  href={currentProblem.problemUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-primary"
-                >
-                  Go to Problem (Codeforces) ↗
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div className="room-section problem-display problem-empty">
-              <h2 className="room-section-title">
-                <span>⚔️</span> Active Problem
-              </h2>
-              <p className="text-muted">No problem selected yet.</p>
-            </div>
-          )}
-
-          {/* Problem History */}
+          {/* Contest History */}
           <div className="room-section">
             <h2 className="room-section-title">
-              <span>📜</span> Problem History
+              <span>📜</span> Contest History
             </h2>
 
-            {problemHistory && problemHistory.length > 0 ? (
+            {contests && contests.length > 0 ? (
               <div className="problem-history-list">
-                {problemHistory
-                  .slice()
-                  .reverse()
-                  .map((problem, index) => {
-                    const isActive =
-                      currentProblem &&
-                      problem.problemUrl === currentProblem.problemUrl;
+                {contests.map((contest, index) => {
+                  return (
+                    <div
+                      key={index}
+                      className="problem-card"
+                      style={{ marginBottom: "12px" }}
+                    >
+                      <div className="problem-header">
+                        <h3 style={{ fontSize: "16px" }}>
+                          {contest.problemName}
+                        </h3>
 
-                    return (
-                      <div
-                        key={index}
-                        className={`problem-card ${
-                          isActive ? "problem-active-highlight" : ""
-                        }`}
-                        style={{ marginBottom: "12px" }}
-                      >
-                        <div className="problem-header">
-                          <h3 style={{ fontSize: "16px" }}>
-                            {problem.problemName}
-                          </h3>
+                        <span
+                          className={`badge ${
+                            contest.status === "ACTIVE" ? "badge-active" : "badge-waiting"
+                          }`}
+                        >
+                          {contest.status === "ACTIVE" ? "ACTIVE" : `COMPLETED`}
+                        </span>
+                      </div>
 
-                          <span
-                            className={`badge ${
-                              isActive ? "badge-active" : "badge-waiting"
-                            }`}
-                          >
-                            {isActive
-                              ? "ACTIVE"
-                              : `Rating: ${problem.rating || "N/A"}`}
-                          </span>
-                        </div>
+                      <p className="text-muted" style={{ fontSize: "13px" }}>
+                        Start Time: {new Date(contest.startTime).toLocaleString()}
+                        <br />
+                        Rating: {contest.rating} | Codeforces ID: {contest.cfContestId}
+                      </p>
 
-                        <p className="text-muted" style={{ fontSize: "13px" }}>
-                          Contest: {problem.contestId} | Index:{" "}
-                          {problem.problemIndex}
-                        </p>
-
+                      <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
                         <a
-                          href={problem.problemUrl}
+                          href={contest.problemUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-outline btn-sm"
-                          style={{ marginTop: "8px" }}
                         >
                           View Problem ↗
                         </a>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => navigate(`/contest/${roomCode}/${contest.contestId}`)}
+                        >
+                          View Leaderboard 🏆
+                        </button>
                       </div>
-                    );
-                  })}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
-              <p className="text-muted">No problems attempted yet.</p>
+              <p className="text-muted">No contests held yet.</p>
             )}
           </div>
         </div>
@@ -331,17 +286,18 @@ const Room = () => {
                   <>
                     <button
                       className="btn btn-primary"
-                      onClick={handlePickProblem}
+                      onClick={handleStartContest}
                       disabled={actionLoading}
                     >
                       {actionLoading ? (
                         <span className="spinner-sm" />
                       ) : (
-                        "🎲 Pick Problem"
+                        "⚔️ Start Contest"
                       )}
                     </button>
                     <button
                       className="btn btn-outline btn-danger"
+                      style={{ marginLeft: 8 }}
                       onClick={() => handleStatusChange("COMPLETED")}
                       disabled={actionLoading}
                     >

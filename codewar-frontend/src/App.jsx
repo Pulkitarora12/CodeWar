@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Join from "./pages/Join";
 import Room from "./pages/Room";
 import Profile from "./pages/Profile";
+import Contest from "./pages/Contest";
 import "./App.css";
 
 // Redirect logged-in users away from auth pages
@@ -39,6 +40,7 @@ function AppRoutes() {
           <Route path="/join" element={<ProtectedRoute><Join /></ProtectedRoute>} />
           <Route path="/room/:roomCode" element={<ProtectedRoute><Room /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/contest/:roomCode/:contestId" element={<ProtectedRoute><Contest /></ProtectedRoute>} />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/login" replace />} />

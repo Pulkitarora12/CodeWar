@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -300,6 +301,49 @@ public class ContestServiceImpl implements ContestService {
                 logger.error("Failed to auto-end contestId: {} — {}", contestId, e.getMessage());
             }
         }, delaySeconds, TimeUnit.SECONDS);
+    }
+
+    @Override
+    public List<Map<String, Object>> getContestsByRoom(String roomCode) {
+        Room room = roomRepository.findByRoomCode(roomCode)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+
+        List<Contest> contests = contestRepository.findByRoomProblem_RoomOrderByStartTimeDesc(room);
+
+        return contests.stream().map(contest -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("contestId", contest.getId());
+            map.put("status", contest.getStatus());
+            map.put("startTime", contest.getStartTime().toString());
+            map.put("endTime", contest.getEndTime() != null ? contest.getEndTime().toString() : "");
+            map.put("problemName", contest.getRoomProblem().getProblemName());
+            map.put("problemUrl", contest.getRoomProblem().getProblemUrl());
+            map.put("rating", contest.getRoomProblem().getRating() != null ? contest.getRoomProblem().getRating() : "N/A");
+            map.put("problemIndex", contest.getRoomProblem().getProblemIndex());
+            map.put("cfContestId", contest.getRoomProblem().getContestId());
+            return map;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public Map<String, Object> getContestDetails(Long contestId) {
+        Contest contest = contestRepository.findById(contestId)
+                .orElseThrow(() -> new RuntimeException("Contest not found"));
+        
+        LeaderboardResponse leaderboard = getLeaderboard(contestId);
+        
+        Map<String, Object> map = new java.util.HashMap<>();
+        map.put("contestId", contest.getId());
+        map.put("status", contest.getStatus());
+        map.put("startTime", contest.getStartTime().toString());
+        map.put("endTime", contest.getEndTime() != null ? contest.getEndTime().toString() : "");
+        map.put("problemName", contest.getRoomProblem().getProblemName());
+        map.put("problemUrl", contest.getRoomProblem().getProblemUrl());
+        map.put("rating", contest.getRoomProblem().getRating() != null ? contest.getRoomProblem().getRating() : "N/A");
+        map.put("problemIndex", contest.getRoomProblem().getProblemIndex());
+        map.put("cfContestId", contest.getRoomProblem().getContestId());
+        map.put("leaderboard", leaderboard.getEntries());
+        return map;
     }
 
     @Override

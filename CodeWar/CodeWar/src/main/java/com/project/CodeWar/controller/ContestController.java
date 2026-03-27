@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -59,5 +60,29 @@ public class ContestController {
     @GetMapping("/{contestId}/leaderboard")
     public ResponseEntity<LeaderboardResponse> getLeaderboard(@PathVariable Long contestId) {
         return ResponseEntity.ok(contestService.getLeaderboard(contestId));
+    }
+
+    @GetMapping("/room/{roomCode}")
+    public ResponseEntity<?> getContestsByRoom(@PathVariable String roomCode) {
+        try {
+            List<Map<String, Object>> results = contestService.getContestsByRoom(roomCode);
+            return ResponseEntity.ok(results);
+        } catch (RuntimeException e) {
+            logger.error("Error fetching contests for room {}: {}", roomCode, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{contestId}/details")
+    public ResponseEntity<?> getContestDetails(@PathVariable Long contestId) {
+        try {
+            Map<String, Object> results = contestService.getContestDetails(contestId);
+            return ResponseEntity.ok(results);
+        } catch (RuntimeException e) {
+            logger.error("Error fetching contest details for {}: {}", contestId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 }

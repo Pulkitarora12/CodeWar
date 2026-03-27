@@ -15,4 +15,6 @@ public interface ContestRepository extends JpaRepository<Contest, Long> {
     Optional<Contest> findByRoomProblem_RoomAndStatus(Room room, ContestStatus status);
 
     List<Contest> findByStatus(ContestStatus status);
+
+    List<Contest> findByRoomProblem_RoomOrderByStartTimeDesc(Room room);
 }

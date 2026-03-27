@@ -5,6 +5,7 @@ import com.project.CodeWar.entity.Contest;
 import com.project.CodeWar.entity.Score;
 import com.project.CodeWar.entity.Submission;
 
+import java.util.List;
 import java.util.Map;
 
 public interface ContestService {
@@ -16,4 +17,8 @@ public interface ContestService {
     void endContest(Long contestId);
 
     LeaderboardResponse getLeaderboard(Long contestId);
+
+    List<Map<String, Object>> getContestsByRoom(String roomCode);
+
+    Map<String, Object> getContestDetails(Long contestId);
 }
