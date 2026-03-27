@@ -161,43 +161,45 @@ public class ContestServiceImpl implements ContestService {
 
         // 2. Identify user and verification status
         User user = authUtil.loggedInUser();
-
         if (!user.isCodeforcesVerified()) {
             throw new RuntimeException("Please verify your Codeforces handle first");
         }
 
         // 3. IMMUTABILITY CHECK: Return existing data if already solved
         Optional<Submission> existingSubmission = submissionRepository.findByContestAndUser(contest, user);
-
         if (existingSubmission.isPresent() && existingSubmission.get().isSolved()) {
             Submission sub = existingSubmission.get();
-            // Calculate the existing score based on the original failed attempts
             int existingScore = Math.max(0, 100 - (sub.getFailedAttempts() * 5));
 
-            logger.info("User {} has already solved contest {}. Returning existing record.", user.getUserName(), contestId);
-
-            return Map.of(
-                    "solved", true,
-                    "failedAttempts", sub.getFailedAttempts(),
-                    "timeTakenSeconds", sub.getTimeTakenSeconds() != null ? sub.getTimeTakenSeconds() : 0,
-                    "score", existingScore,
-                    "message", "Problem already solved!"
-            );
+            Map<String, Object> response = new HashMap<>();
+            response.put("solved", true);
+            response.put("failedAttempts", sub.getFailedAttempts());
+            response.put("timeTakenSeconds", sub.getTimeTakenSeconds() != null ? sub.getTimeTakenSeconds() : 0);
+            response.put("score", existingScore);
+            response.put("message", "Problem already solved!");
+            return response;
         }
 
-        // 4. Fetch and filter Codeforces submissions
+        // 4. Fetch and filter Codeforces submissions within the CONTEST WINDOW
         RoomProblem roomProblem = contest.getRoomProblem();
         String handle = user.getCodeforcesHandle();
 
-        List<CfSubmission> allSubmissions = codeforcesService.getRecentSubmissions(handle, 30);
+        // Convert boundaries to Epoch Seconds (UTC) to match Codeforces API
+        long contestStartEpoch = contest.getStartTime().toEpochSecond(ZoneOffset.UTC);
+        long contestEndEpoch = contest.getEndTime().toEpochSecond(ZoneOffset.UTC);
 
+        List<CfSubmission> allSubmissions = codeforcesService.getRecentSubmissions(handle, 50);
+
+        // Filter by: Problem ID + Index + Time Window
         List<CfSubmission> problemSubmissions = allSubmissions.stream()
                 .filter(s -> s.getProblem() != null
                         && roomProblem.getContestId().equals(s.getProblem().getContestId())
-                        && roomProblem.getProblemIndex().equals(s.getProblem().getIndex()))
+                        && roomProblem.getProblemIndex().equals(s.getProblem().getIndex())
+                        && s.getCreationTimeSeconds() >= contestStartEpoch
+                        && s.getCreationTimeSeconds() <= contestEndEpoch)
                 .toList();
 
-        // 5. Analyze results
+        // 5. Analyze results from the filtered window
         int failedAttempts = (int) problemSubmissions.stream()
                 .filter(s -> !"OK".equals(s.getVerdict()))
                 .count();
@@ -221,9 +223,8 @@ public class ContestServiceImpl implements ContestService {
         if (solved && submission.getSubmittedAt() == null) {
             submission.setSubmittedAt(LocalDateTime.now());
 
-            long startEpoch = contest.getStartTime().toEpochSecond(ZoneOffset.UTC);
             long acEpoch = acSubmission.get().getCreationTimeSeconds();
-            long timeTaken = acEpoch - startEpoch;
+            long timeTaken = acEpoch - contestStartEpoch;
             submission.setTimeTakenSeconds(Math.max(timeTaken, 0));
 
             // Persistence: Official score record
@@ -239,12 +240,14 @@ public class ContestServiceImpl implements ContestService {
 
         submissionRepository.save(submission);
 
-        return Map.of(
-                "solved", solved,
-                "failedAttempts", failedAttempts,
-                "timeTakenSeconds", submission.getTimeTakenSeconds() != null ? submission.getTimeTakenSeconds() : 0,
-                "score", solved ? Math.max(0, 100 - (failedAttempts * 5)) : 0
-        );
+        // 8. Construct Final Response
+        Map<String, Object> result = new HashMap<>();
+        result.put("solved", solved);
+        result.put("failedAttempts", failedAttempts);
+        result.put("timeTakenSeconds", submission.getTimeTakenSeconds() != null ? submission.getTimeTakenSeconds() : 0);
+        result.put("score", solved ? Math.max(0, 100 - (failedAttempts * 5)) : 0);
+
+        return result;
     }
 
     @Override
