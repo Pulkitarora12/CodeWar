@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getContestDetails, checkSubmission, endContest } from "../api/contest";
 import { getRoom } from "../api/room";
+import SockJS from "sockjs-client";
+import { over } from "stompjs";
+import { BASE_URL } from "../utils/constants";
 
 const Contest = () => {
   const { roomCode, contestId } = useParams();
@@ -16,6 +19,7 @@ const Contest = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
+  const stompClientRef = useRef(null);
 
   const fetchContestData = useCallback(async () => {
     try {
@@ -40,14 +44,37 @@ const Contest = () => {
     }
   }, [contestId]);
 
+  // Initial data fetch
   useEffect(() => {
     fetchContestData();
-    const intervalId = setInterval(() => {
-      fetchContestData();
-    }, 10000); // Poll every 10 seconds
-
-    return () => clearInterval(intervalId);
   }, [fetchContestData]);
+
+  // WebSocket connection for real-time leaderboard updates
+  useEffect(() => {
+    const socket = new SockJS(`${BASE_URL}/ws-leaderboard`);
+    const stompClient = over(socket);
+    stompClient.debug = null; // Disable noisy STOMP debug logs
+
+    stompClient.connect({}, () => {
+      stompClient.subscribe(
+        `/topic/contest/${contestId}/leaderboard`,
+        (message) => {
+          const data = JSON.parse(message.body);
+          setLeaderboard(data.entries || []);
+        }
+      );
+    }, (err) => {
+      console.error("WebSocket connection error:", err);
+    });
+
+    stompClientRef.current = stompClient;
+
+    return () => {
+      if (stompClientRef.current && stompClientRef.current.connected) {
+        stompClientRef.current.disconnect();
+      }
+    };
+  }, [contestId]);
 
   const handleCheckSubmission = async () => {
     setActionLoading(true);
@@ -213,3 +240,4 @@ const Contest = () => {
 };
 
 export default Contest;
+
