@@ -1,53 +1,60 @@
 # CodeWar ⚔️
 
-**CodeWar** is a high-performance, real-time competitive programming arena built with Spring Boot. It allows users to create private rooms, link their Codeforces profiles securely, and compete against friends with problems automatically scaled to the participants' skill levels.
+**CodeWar** is a real-time, gamified competitive programming platform that allows developers to compete in synchronized, head-to-head coding challenges. By integrating with the **Codeforces API**, the platform automates problem discovery and submission verification, providing a seamless "competitive room" experience with live leaderboards.
 
-## 🚀 Features
+## 🚀 Core Features
 
-* **Secure Profile Verification**: Prove ownership of your Codeforces handle by placing a unique system-generated token in your Codeforces profile's "First Name" field.
-* **Dynamic Room Management**: Create rooms with unique codes (e.g., `CW-XXXXXX`) and invite participants via direct links.
-* **Intelligent Difficulty Scaling**: Automatically calculates the optimal problem rating based on the average Codeforces rating of all verified participants in the room.
-* **Stateless Security**: Utilizes JWT-based authentication for a scalable, stateless backend.
-* **Multi-Provider OAuth2**: Support for seamless login via Google and GitHub.
-* **Admin Dashboard**: Robust controls for managing users, roles, and account statuses.
+* **Real-Time Lobby System:** Synchronized room management using **WebSockets (STOMP)** for instant participant updates and contest transitions.
+* **Dynamic Difficulty Scaling:** A custom algorithm that calculates the optimal problem difficulty (800–3000 rating) by averaging the verified Codeforces ratings of all room participants.
+* **Automated Verification:** A secure "handshake" system that verifies Codeforces handles by matching unique tokens within the user's external profile.
+* **Live Competition Engine:** * **Auto-Grading:** Real-time submission fetching from Codeforces to verify "OK" (Accepted) verdicts.
+    * **Scoring Logic:** Points are calculated based on speed and accuracy: $100 - (failed\_attempts \times 5)$.
+    * **Tie-Breaking:** Leaderboards are ranked by highest score, then by the lowest time taken to solve.
+* **Secure Authentication:** Stateless security using **JWT** and **Spring Security**, featuring a multi-step password reset workflow with **JavaMailSender**.
 
 ## 🛠️ Tech Stack
 
-* **Backend**: Java 21
-* **Framework**: Spring Boot 4.0.4
-* **Security**: Spring Security, JWT (jjwt), OAuth2
-* **Database**: MySQL
-* **Communication**: JavaMail Sender for password recovery
+* **Backend:** Java 21, Spring Boot, Spring Security, JPA/Hibernate.
+* **Real-Time:** Spring WebSocket (STOMP), Message Broker.
+* **Database:** MySQL.
+* **External APIs:** Codeforces API (user.info, user.status, problemset.problems).
+* **Security:** JSON Web Tokens (JWT), BCrypt, OAuth2.
 
-## 🏗️ Core Logic
+## 🏗️ System Architecture
 
-### Codeforces Verification Protocol
-To ensure fair play, the system verifies handles using the following flow:
-1.  **Token Generation**: The backend generates a unique `cw-` UUID.
-2.  **External Confirmation**: The application calls the **Codeforces user.info API** to check if the user's `firstName` matches the generated token.
-3.  **Sync**: Once verified, the user's actual rating and rank are synchronized with the platform.
+### 1. Authentication & Identity
+Handles user registration, JWT-based login, and administrative oversight for account status (locking/expiring).
 
-### Smart Problem Selection Algorithm
-The `RoomService` determines the competition level by analyzing verified participant data:
-* **Average-Based Matchmaking**: The system aggregates the ratings of all verified participants in a room to find a fair middle ground.
-* **Adaptive Difficulty Logic**: It calculates a problem rating by adding a +100 point difficulty buffer to the room's average rating and rounding to the nearest 100-point tier (e.g., an average rating of 1340 results in a 1400-rated problem).
-* **Rating Bounds**: The system includes logic to cap problem difficulty at a maximum of 3000.
+### 2. Codeforces Linkage
+Uses a non-invasive verification flow:
+1. System generates a unique `cw-xxxx` token.
+2. User updates their Codeforces "First Name".
+3. System validates the token via `user.info` API to mark the account as verified.
 
-## 🛤️ Roadmap (In Progress)
+### 3. Room & Contest Workflow
+* **Lobby:** Users join via unique room codes (e.g., `CW-A1B2C3`).
+* **Contest Start:** The system calculates the group's average rating and picks a matching problem.
+* **Monitoring:** The backend periodically checks the participant's Codeforces status for the specific problem ID.
+* **WebSocket Updates:** Whenever a user solves a problem, the updated leaderboard is broadcasted to all participants.
 
-* **WebSocket Integration**: Real-time chat and live leaderboards for active rooms.
-* **Match History**: Persistent records of previous contests and room outcomes.
-* **Code Submission & Judging**: Real-time tracking of problem status directly within the arena.
+## 🚦 Getting Started
 
-## ⚙️ Setup
+### Prerequisites
+* JDK 21+
+* Maven 3.8+
+* MySQL 8.0+
 
-1.  **Configure Environment**: Set the following variables in your environment or `application.yaml`:
-    * `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`
-    * `JWT_SECRET`, `JWT_EXPIRATION`
-    * `GITHUB_CLIENT`, `GITHUB_SECRET`
-    * `GOOGLE_CLIENT`, `GOOGLE_SECRET`
-2.  **Build & Run**:
+### Setup
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/pulkitarora12/codewar.git
     ```
-    .mvn clean install
-    .mvn spring-boot:run
+2.  **Configure environment:**
+    Update `src/main/resources/application.yaml` with your MySQL credentials, JWT Secret, and Mail server details.
+3.  **Build and Run:**
+    ```bash
+    mvn clean install
+    mvn spring-boot:run
     ```
+
+---
