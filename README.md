@@ -7,7 +7,8 @@
 * **Real-Time Lobby System:** Synchronized room management using **WebSockets (STOMP)** for instant participant updates and contest transitions.
 * **Dynamic Difficulty Scaling:** A custom algorithm that calculates the optimal problem difficulty (800–3000 rating) by averaging the verified Codeforces ratings of all room participants.
 * **Automated Verification:** A secure "handshake" system that verifies Codeforces handles by matching unique tokens within the user's external profile.
-* **Live Competition Engine:** * **Auto-Grading:** Real-time submission fetching from Codeforces to verify "OK" (Accepted) verdicts.
+* **Live Competition Engine:**
+    * **Auto-Grading:** Real-time submission fetching from Codeforces to verify "OK" (Accepted) verdicts.
     * **Scoring Logic:** Points are calculated based on speed and accuracy: $100 - (failed\_attempts \times 5)$.
     * **Tie-Breaking:** Leaderboards are ranked by highest score, then by the lowest time taken to solve.
 * **Secure Authentication:** Stateless security using **JWT** and **Spring Security**, featuring a multi-step password reset workflow with **JavaMailSender**.
@@ -27,15 +28,21 @@ Handles user registration, JWT-based login, and administrative oversight for acc
 
 ### 2. Codeforces Linkage
 Uses a non-invasive verification flow:
-1. System generates a unique `cw-xxxx` token.
-2. User updates their Codeforces "First Name".
-3. System validates the token via `user.info` API to mark the account as verified.
+1.  System generates a unique `cw-xxxx` token.
+2.  User updates their Codeforces "First Name".
+3.  System validates the token via `user.info` API to mark the account as verified.
 
 ### 3. Room & Contest Workflow
 * **Lobby:** Users join via unique room codes (e.g., `CW-A1B2C3`).
 * **Contest Start:** The system calculates the group's average rating and picks a matching problem.
 * **Monitoring:** The backend periodically checks the participant's Codeforces status for the specific problem ID.
 * **WebSocket Updates:** Whenever a user solves a problem, the updated leaderboard is broadcasted to all participants.
+
+## ⏭️ Up Next
+
+* **Multithreaded Submission Service:** Implementation of a high-performance background service to automate submission tracking.
+    * **User-Specific Threads:** The system will spawn a dedicated thread for every participant in an active contest.
+    * **Concurrent Polling:** Each thread will independently poll the Codeforces API for status updates, ensuring real-time leaderboard accuracy without blocking the main application flow.
 
 ## 🚦 Getting Started
 
@@ -47,8 +54,9 @@ Uses a non-invasive verification flow:
 ### Setup
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/pulkitarora12/codewar.git
+    git clone [https://github.com/pulkitarora12/codewar.git](https://github.com/pulkitarora12/codewar.git)
     ```
+   
 2.  **Configure environment:**
     Update `src/main/resources/application.yaml` with your MySQL credentials, JWT Secret, and Mail server details.
 3.  **Build and Run:**
@@ -56,5 +64,3 @@ Uses a non-invasive verification flow:
     mvn clean install
     mvn spring-boot:run
     ```
-
----
