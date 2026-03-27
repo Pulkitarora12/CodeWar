@@ -1,6 +1,8 @@
 package com.project.CodeWar.service.impl;
 
 import com.project.CodeWar.dtos.CfSubmission;
+import com.project.CodeWar.dtos.LeaderboardEntryDTO;
+import com.project.CodeWar.dtos.LeaderboardResponse;
 import com.project.CodeWar.entity.*;
 import com.project.CodeWar.repository.*;
 import com.project.CodeWar.security.util.AuthUtil;
@@ -11,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
@@ -27,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.stream.Collectors;
 
 @Service
 public class ContestServiceImpl implements ContestService {
@@ -61,6 +65,9 @@ public class ContestServiceImpl implements ContestService {
 
     @Autowired
     private AuthUtil authUtil;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -208,6 +215,14 @@ public class ContestServiceImpl implements ContestService {
             // calculate and save score
             int score = Math.max(0, 100 - (failedAttempts * 5));
             saveScore(contest, user, score);
+
+            LeaderboardResponse updatedLeaderboard = getLeaderboard(contestId);
+
+            // Send it to the room-specific topic
+            // Frontend will subscribe to: /topic/contest/{contestId}/leaderboard
+            messagingTemplate.convertAndSend("/topic/contest/" + contestId + "/leaderboard", updatedLeaderboard);
+
+            logger.info("Broadcasted leaderboard update for contestId: {}", contestId);
         }
 
         submissionRepository.save(submission);
@@ -275,5 +290,47 @@ public class ContestServiceImpl implements ContestService {
                 logger.error("Failed to auto-end contestId: {} — {}", contestId, e.getMessage());
             }
         }, delaySeconds, TimeUnit.SECONDS);
+    }
+
+    @Override
+    public LeaderboardResponse getLeaderboard(Long contestId) {
+        // 1. Verify contest exists
+        Contest contest = contestRepository.findById(contestId)
+                .orElseThrow(() -> new RuntimeException("Contest not found"));
+
+        // 2. Fetch all scores for this contest
+        List<Score> scores = scoreRepository.findByContestId(contestId);
+
+        // 3. Fetch all submissions to get time and attempts
+        List<Submission> submissions = submissionRepository.findByContestId(contestId);
+
+        // Create a map of UserID -> Submission for quick lookup
+        Map<Long, Submission> userSubmissions = submissions.stream()
+                .collect(Collectors.toMap(s -> s.getUser().getUserId(), s -> s));
+
+        // 4. Map to DTOs using Score as the primary driver
+        List<LeaderboardEntryDTO> entries = scores.stream()
+                .map(score -> {
+                    Submission sub = userSubmissions.get(score.getUser().getUserId());
+                    return new LeaderboardEntryDTO(
+                            score.getUser().getUserName(),
+                            score.getScore(), // From Score Entity
+                            sub != null ? sub.getTimeTakenSeconds() : 0L, // From Submission
+                            sub != null ? sub.getFailedAttempts() : 0     // From Submission
+                    );
+                })
+                // 5. Sort: Higher score first, then lower time taken
+                .sorted((a, b) -> {
+                    if (b.getScore() != a.getScore()) {
+                        return b.getScore() - a.getScore();
+                    }
+                    // Use 0 as default for time comparison if null
+                    Long timeA = a.getTimeTakenSeconds() != null ? a.getTimeTakenSeconds() : Long.MAX_VALUE;
+                    Long timeB = b.getTimeTakenSeconds() != null ? b.getTimeTakenSeconds() : Long.MAX_VALUE;
+                    return timeA.compareTo(timeB);
+                })
+                .toList();
+
+        return new LeaderboardResponse(contestId, entries);
     }
 }

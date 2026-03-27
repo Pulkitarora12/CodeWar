@@ -1,5 +1,6 @@
 package com.project.CodeWar.controller;
 
+import com.project.CodeWar.dtos.LeaderboardResponse;
 import com.project.CodeWar.service.ContestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,5 +54,10 @@ public class ContestController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", e.getMessage()));
         }
+    }
+
+    @GetMapping("/{contestId}/leaderboard")
+    public ResponseEntity<LeaderboardResponse> getLeaderboard(@PathVariable Long contestId) {
+        return ResponseEntity.ok(contestService.getLeaderboard(contestId));
     }
 }

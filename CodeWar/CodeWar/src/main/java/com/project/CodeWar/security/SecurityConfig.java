@@ -67,6 +67,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/csrf-token").permitAll()
                         .requestMatchers("/api/auth/public/**").permitAll()
                         .requestMatchers("/oauth2/**").permitAll()
+                        .requestMatchers("/ws-leaderboard/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> {
                     oauth2.successHandler(oAuth2LoginSuccessHandler);

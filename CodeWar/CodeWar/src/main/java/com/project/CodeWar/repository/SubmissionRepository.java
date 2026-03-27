@@ -15,4 +15,6 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     Optional<Submission> findByContestAndUser(Contest contest, User user);
 
     List<Submission> findByContest(Contest contest);
+
+    List<Submission> findByContestId(Long contestId);
 }
