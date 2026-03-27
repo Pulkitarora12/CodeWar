@@ -150,6 +150,7 @@ public class ContestServiceImpl implements ContestService {
     public Map<String, Object> checkSubmission(Long contestId) {
         logger.info("Checking submission for contestId: {}", contestId);
 
+        // 1. Verify contest existence and status
         Contest contest = contestRepository.findById(contestId)
                 .orElseThrow(() -> new RuntimeException("Contest not found"));
 
@@ -157,30 +158,45 @@ public class ContestServiceImpl implements ContestService {
             throw new RuntimeException("Contest is already completed");
         }
 
+        // 2. Identify user and verification status
         User user = authUtil.loggedInUser();
 
         if (!user.isCodeforcesVerified()) {
             throw new RuntimeException("Please verify your Codeforces handle first");
         }
 
+        // 3. IMMUTABILITY CHECK: Return existing data if already solved
+        Optional<Submission> existingSubmission = submissionRepository.findByContestAndUser(contest, user);
+
+        if (existingSubmission.isPresent() && existingSubmission.get().isSolved()) {
+            Submission sub = existingSubmission.get();
+            // Calculate the existing score based on the original failed attempts
+            int existingScore = Math.max(0, 100 - (sub.getFailedAttempts() * 5));
+
+            logger.info("User {} has already solved contest {}. Returning existing record.", user.getUserName(), contestId);
+
+            return Map.of(
+                    "solved", true,
+                    "failedAttempts", sub.getFailedAttempts(),
+                    "timeTakenSeconds", sub.getTimeTakenSeconds() != null ? sub.getTimeTakenSeconds() : 0,
+                    "score", existingScore,
+                    "message", "Problem already solved!"
+            );
+        }
+
+        // 4. Fetch and filter Codeforces submissions
         RoomProblem roomProblem = contest.getRoomProblem();
         String handle = user.getCodeforcesHandle();
 
-        // fetch last 30 submissions from CF
         List<CfSubmission> allSubmissions = codeforcesService.getRecentSubmissions(handle, 30);
 
-        // filter by our problem
         List<CfSubmission> problemSubmissions = allSubmissions.stream()
                 .filter(s -> s.getProblem() != null
                         && roomProblem.getContestId().equals(s.getProblem().getContestId())
                         && roomProblem.getProblemIndex().equals(s.getProblem().getIndex()))
                 .toList();
 
-        logger.info("Found {} submissions for problem {} {} by handle: {}",
-                problemSubmissions.size(), roomProblem.getContestId(),
-                roomProblem.getProblemIndex(), handle);
-
-        // count failed attempts and check for AC
+        // 5. Analyze results
         int failedAttempts = (int) problemSubmissions.stream()
                 .filter(s -> !"OK".equals(s.getVerdict()))
                 .count();
@@ -191,16 +207,16 @@ public class ContestServiceImpl implements ContestService {
 
         boolean solved = acSubmission.isPresent();
 
-        // upsert submission record
-        Submission submission = submissionRepository
-                .findByContestAndUser(contest, user)
-                .orElse(new Submission());
-
+        // 6. Update or create submission record
+        Submission submission = existingSubmission.orElse(new Submission());
         submission.setContest(contest);
         submission.setUser(user);
         submission.setFailedAttempts(failedAttempts);
         submission.setSolved(solved);
 
+        int score = 0;
+
+        // 7. Handle first-time success (AC)
         if (solved && submission.getSubmittedAt() == null) {
             submission.setSubmittedAt(LocalDateTime.now());
 
@@ -209,24 +225,18 @@ public class ContestServiceImpl implements ContestService {
             long timeTaken = acEpoch - startEpoch;
             submission.setTimeTakenSeconds(Math.max(timeTaken, 0));
 
-            logger.info("AC found for user: {} in contestId: {} — timeTaken: {}s",
-                    user.getUserName(), contestId, timeTaken);
-
-            // calculate and save score
-            int score = Math.max(0, 100 - (failedAttempts * 5));
+            // Persistence: Official score record
+            score = Math.max(0, 100 - (failedAttempts * 5));
             saveScore(contest, user, score);
 
+            // Real-time Update: WebSocket Broadcast
             LeaderboardResponse updatedLeaderboard = getLeaderboard(contestId);
-
-            // Send it to the room-specific topic
-            // Frontend will subscribe to: /topic/contest/{contestId}/leaderboard
             messagingTemplate.convertAndSend("/topic/contest/" + contestId + "/leaderboard", updatedLeaderboard);
 
-            logger.info("Broadcasted leaderboard update for contestId: {}", contestId);
+            logger.info("AC found for user: {} in contestId: {} — score: {}", user.getUserName(), contestId, score);
         }
 
         submissionRepository.save(submission);
-        logger.info("Submission upserted for user: {} contestId: {}", user.getUserName(), contestId);
 
         return Map.of(
                 "solved", solved,
