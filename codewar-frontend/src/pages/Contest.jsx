@@ -219,10 +219,12 @@ const Contest = () => {
                       <span className="badge badge-active">{entry.score || "0"}</span>
                     </td>
                     <td style={{ padding: "12px 0", color: "var(--text-muted)" }}>
-                      {entry.submissionCount || 0}
+                      {entry.failedAttempts + (entry.score > 0 ? 1 : 0)}
                     </td>
                     <td style={{ padding: "12px 0", color: "var(--text-muted)" }}>
-                      {entry.penalty || 0}
+                      {entry.timeTakenSeconds > 0 
+                        ? `${Math.floor(entry.timeTakenSeconds / 60)}m ${entry.timeTakenSeconds % 60}s${entry.failedAttempts > 0 ? ` (+${entry.failedAttempts} fails)` : ''}`
+                        : (entry.failedAttempts > 0 ? `${entry.failedAttempts} fails` : "0")}
                     </td>
                   </tr>
                 ))}

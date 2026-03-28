@@ -85,7 +85,7 @@ public class ContestServiceImpl implements ContestService {
         }
 
         for (Contest contest : activeContests) {
-            long remainingSeconds = Duration.between(LocalDateTime.now(), contest.getEndTime()).getSeconds();
+            long remainingSeconds = Duration.between(LocalDateTime.now(ZoneOffset.UTC), contest.getEndTime()).getSeconds();
 
             if (remainingSeconds > 0) {
                 logger.info("Re-scheduling contestId: {} — {}s remaining", contest.getId(), remainingSeconds);
@@ -119,7 +119,7 @@ public class ContestServiceImpl implements ContestService {
         logger.info("Problem picked: {} {}", roomProblem.getContestId(), roomProblem.getProblemIndex());
 
         // create contest
-        LocalDateTime startTime = LocalDateTime.now();
+        LocalDateTime startTime = LocalDateTime.now(ZoneOffset.UTC);
         LocalDateTime endTime = startTime.plusMinutes(30);
 
         Contest contest = new Contest();
@@ -188,16 +188,33 @@ public class ContestServiceImpl implements ContestService {
         long contestStartEpoch = contest.getStartTime().toEpochSecond(ZoneOffset.UTC);
         long contestEndEpoch = contest.getEndTime().toEpochSecond(ZoneOffset.UTC);
 
+        logger.info("=== DEBUG SUBMISSIONS ===");
+        logger.info("Contest Start Epoch: {} ({})", contestStartEpoch, contest.getStartTime());
+        logger.info("Contest End Epoch: {} ({})", contestEndEpoch, contest.getEndTime());
+        logger.info("Room Problem ContestId: {}, Index: {}", roomProblem.getContestId(), roomProblem.getProblemIndex());
+
         List<CfSubmission> allSubmissions = codeforcesService.getRecentSubmissions(handle, 50);
+        logger.info("Fetched {} total submissions from CF.", allSubmissions.size());
 
         // Filter by: Problem ID + Index + Time Window
         List<CfSubmission> problemSubmissions = allSubmissions.stream()
-                .filter(s -> s.getProblem() != null
-                        && roomProblem.getContestId().equals(s.getProblem().getContestId())
-                        && roomProblem.getProblemIndex().equals(s.getProblem().getIndex())
-                        && s.getCreationTimeSeconds() >= contestStartEpoch
-                        && s.getCreationTimeSeconds() <= contestEndEpoch)
+                .filter(s -> {
+                    if (s.getProblem() == null) return false;
+                    boolean matchContestId = roomProblem.getContestId().equals(s.getProblem().getContestId());
+                    boolean matchIndex = roomProblem.getProblemIndex().equals(s.getProblem().getIndex());
+                    // Allow a 5-minute buffer (300 seconds) for clock drift between local PC and Codeforces
+                    boolean matchTime = s.getCreationTimeSeconds() >= (contestStartEpoch - 300) 
+                                     && s.getCreationTimeSeconds() <= (contestEndEpoch + 300);
+                    
+                    if (matchContestId && matchIndex) {
+                        logger.info("Found CF submission for this problem: verdict={}, time={}, matchTime={}", 
+                            s.getVerdict(), s.getCreationTimeSeconds(), matchTime);
+                    }
+                    return matchContestId && matchIndex && matchTime;
+                })
                 .toList();
+        logger.info("Matched {} submissions.", problemSubmissions.size());
+        logger.info("=== END DEBUG ===");
 
         // 5. Analyze results from the filtered window
         int failedAttempts = (int) problemSubmissions.stream()
@@ -317,8 +334,8 @@ public class ContestServiceImpl implements ContestService {
             Map<String, Object> map = new HashMap<>();
             map.put("contestId", contest.getId());
             map.put("status", contest.getStatus());
-            map.put("startTime", contest.getStartTime().toString());
-            map.put("endTime", contest.getEndTime() != null ? contest.getEndTime().toString() : "");
+            map.put("startTime", contest.getStartTime().toString() + "Z");
+            map.put("endTime", contest.getEndTime() != null ? contest.getEndTime().toString() + "Z" : "");
             map.put("problemName", contest.getRoomProblem().getProblemName());
             map.put("problemUrl", contest.getRoomProblem().getProblemUrl());
             map.put("rating", contest.getRoomProblem().getRating() != null ? contest.getRoomProblem().getRating() : "N/A");
@@ -338,8 +355,8 @@ public class ContestServiceImpl implements ContestService {
         Map<String, Object> map = new java.util.HashMap<>();
         map.put("contestId", contest.getId());
         map.put("status", contest.getStatus());
-        map.put("startTime", contest.getStartTime().toString());
-        map.put("endTime", contest.getEndTime() != null ? contest.getEndTime().toString() : "");
+        map.put("startTime", contest.getStartTime().toString() + "Z");
+        map.put("endTime", contest.getEndTime() != null ? contest.getEndTime().toString() + "Z" : "");
         map.put("problemName", contest.getRoomProblem().getProblemName());
         map.put("problemUrl", contest.getRoomProblem().getProblemUrl());
         map.put("rating", contest.getRoomProblem().getRating() != null ? contest.getRoomProblem().getRating() : "N/A");
@@ -372,7 +389,7 @@ public class ContestServiceImpl implements ContestService {
                     return new LeaderboardEntryDTO(
                             score.getUser().getUserName(),
                             score.getScore(), // From Score Entity
-                            sub != null ? sub.getTimeTakenSeconds() : 0L, // From Submission
+                            sub != null && sub.getTimeTakenSeconds() != null ? sub.getTimeTakenSeconds() : 0L, // From Submission
                             sub != null ? sub.getFailedAttempts() : 0     // From Submission
                     );
                 })

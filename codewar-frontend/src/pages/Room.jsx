@@ -31,9 +31,12 @@ const Room = () => {
         .then((r) => setCfRatings(r.data.participants || []))
         .catch(() => setCfRatings([]));
 
-      // ✅ add this
+      // ✅ Fetch contests and sort latest first by contestId
       getContestsByRoom(roomCode)
-        .then((r) => setContests(r.data || []))
+        .then((r) => {
+          const sorted = (r.data || []).sort((a, b) => b.contestId - a.contestId);
+          setContests(sorted);
+        })
         .catch(() => setContests([]));
     } catch (err) {
       setError(err.response?.data?.message || "Room not found.");
@@ -150,6 +153,58 @@ const Room = () => {
         </div>
       )}
 
+      {/* Host Controls - Moved to Top Level for easy access */}
+      {isHost && (
+        <div className="room-section" style={{ marginBottom: "24px", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--card)", border: "1px solid var(--border)", borderRadius: "12px", flexWrap: "wrap", gap: "16px" }}>
+          <div>
+            <h2 style={{ fontSize: "18px", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+              <span>⚙️</span> Host Controls
+            </h2>
+            <p className="text-muted" style={{ fontSize: "14px", margin: "4px 0 0 0" }}>
+              {status === "COMPLETED" ? "This room has been closed. No more entries allowed." : "Manage your room and start contests."}
+            </p>
+          </div>
+          <div className="room-controls" style={{ display: "flex", gap: "12px", margin: 0, alignItems: "center" }}>
+            {status === "WAITING" && (
+              <>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => handleStatusChange("IN_PROGRESS")}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? <span className="spinner-sm" /> : "🚀 Start Battle"}
+                </button>
+                <button
+                  className="btn btn-outline btn-danger"
+                  onClick={() => handleStatusChange("COMPLETED")}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? <span className="spinner-sm" /> : "🔒 Close Entries"}
+                </button>
+              </>
+            )}
+            {status === "IN_PROGRESS" && (
+              <>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleStartContest}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? <span className="spinner-sm" /> : "⚔️ Start Contest"}
+                </button>
+                <button
+                  className="btn btn-outline btn-danger"
+                  onClick={() => handleStatusChange("COMPLETED")}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? <span className="spinner-sm" /> : "🏁 Complete Room"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Two-Column Layout */}
       <div className="room-split-layout">
         {/* LEFT: Contest History */}
@@ -249,75 +304,6 @@ const Room = () => {
             />
           </div>
 
-          {/* Host Controls */}
-          {isHost && (
-            <div className="room-section">
-              <h2 className="room-section-title">
-                <span>⚙️</span> Room Controls
-              </h2>
-              <div className="room-controls">
-                {status === "WAITING" && (
-                  <>
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => handleStatusChange("IN_PROGRESS")}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? (
-                        <span className="spinner-sm" />
-                      ) : (
-                        "🚀 Start Battle"
-                      )}
-                    </button>
-                    <button
-                      className="btn btn-outline btn-danger"
-                      onClick={() => handleStatusChange("COMPLETED")}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? (
-                        <span className="spinner-sm" />
-                      ) : (
-                        "🔒 Close Entries"
-                      )}
-                    </button>
-                  </>
-                )}
-                {status === "IN_PROGRESS" && (
-                  <>
-                    <button
-                      className="btn btn-primary"
-                      onClick={handleStartContest}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? (
-                        <span className="spinner-sm" />
-                      ) : (
-                        "⚔️ Start Contest"
-                      )}
-                    </button>
-                    <button
-                      className="btn btn-outline btn-danger"
-                      style={{ marginLeft: 8 }}
-                      onClick={() => handleStatusChange("COMPLETED")}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? (
-                        <span className="spinner-sm" />
-                      ) : (
-                        "🏁 Complete Room"
-                      )}
-                    </button>
-                  </>
-                )}
-                {status === "COMPLETED" && (
-                  <p className="text-muted">
-                    This room has been closed. No more entries allowed.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-          
         </div>
       </div>
 
