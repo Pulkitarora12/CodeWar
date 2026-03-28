@@ -1,6 +1,6 @@
 # CodeWar ⚔️
 
-**CodeWar** is a real-time, gamified competitive programming platform that allows developers to compete in synchronized, head-to-head coding challenges. By integrating with the **Codeforces API**, the platform automates problem discovery and submission verification, providing a seamless "competitive room" experience with live leaderboards.
+**CodeWar** is a real-time, gamified competitive programming platform that allows developers to compete in synchronized, head-to-head coding challenges. By integrating with the **Codeforces API**, the platform automates problem discovery and submission verification, providing a seamless "competitive room" experience with live leaderboards and contest history.
 
 ## 🚀 Core Features
 
@@ -11,11 +11,19 @@
     * **Auto-Grading:** Real-time submission fetching from Codeforces to verify "OK" (Accepted) verdicts.
     * **Scoring Logic:** Points are calculated based on speed and accuracy: $100 - (failed\_attempts \times 5)$.
     * **Tie-Breaking:** Leaderboards are ranked by highest score, then by the lowest time taken to solve.
+    * **Contest History:** Users can view their past contest performance, access older leaderboards, and review submissions.
 * **Secure Authentication:** Stateless security using **JWT** and **Spring Security**, featuring a multi-step password reset workflow with **JavaMailSender**.
 
 ## 🛠️ Tech Stack
 
-* **Backend:** Java 21, Spring Boot, Spring Security, JPA/Hibernate.
+### Frontend
+* **Framework:** React 18, Vite
+* **Styling:** Tailwind CSS
+* **Real-Time:** SockJS, StompJS
+* **Routing:** React Router DOM
+
+### Backend
+* **Core:** Java 21, Spring Boot, Spring Security, JPA/Hibernate.
 * **Real-Time:** Spring WebSocket (STOMP), Message Broker.
 * **Database:** MySQL.
 * **External APIs:** Codeforces API (user.info, user.status, problemset.problems).
@@ -38,29 +46,43 @@ Uses a non-invasive verification flow:
 * **Monitoring:** The backend periodically checks the participant's Codeforces status for the specific problem ID.
 * **WebSocket Updates:** Whenever a user solves a problem, the updated leaderboard is broadcasted to all participants.
 
-## ⏭️ Up Next
-
-* **Multithreaded Submission Service:** Implementation of a high-performance background service to automate submission tracking.
-    * **User-Specific Threads:** The system will spawn a dedicated thread for every participant in an active contest.
-    * **Concurrent Polling:** Each thread will independently poll the Codeforces API for status updates, ensuring real-time leaderboard accuracy without blocking the main application flow.
-
 ## 🚦 Getting Started
 
 ### Prerequisites
-* JDK 21+
-* Maven 3.8+
-* MySQL 8.0+
+* **Backend:** JDK 21+, Maven 3.8+, MySQL 8.0+
+* **Frontend:** Node.js 18+, npm
 
 ### Setup
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/pulkitarora12/codewar.git](https://github.com/pulkitarora12/codewar.git)
-    ```
-   
-2.  **Configure environment:**
-    Update `src/main/resources/application.yaml` with your MySQL credentials, JWT Secret, and Mail server details.
-3.  **Build and Run:**
-    ```bash
-    mvn clean install
-    mvn spring-boot:run
-    ```
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Pulkitarora12/CodeWar.git
+   ```
+
+2. **Backend Setup:**
+   * Navigate to the backend directory:
+     ```bash
+     cd CodeWar/CodeWar
+     ```
+   * Update `src/main/resources/application.yaml` with your MySQL credentials, JWT Secret, and Mail server details.
+   * Build and run the server:
+     ```bash
+     mvn clean install
+     mvn spring-boot:run
+     ```
+   * *Note: Ensure your MySQL server is running and the database specified in `.yaml` exists.*
+
+3. **Frontend Setup:**
+   * Open a new terminal and navigate to the frontend directory:
+     ```bash
+     cd CodeWar/codewar-frontend
+     ```
+   * Install dependencies:
+     ```bash
+     npm install
+     ```
+   * Start the development server:
+     ```bash
+     npm run dev
+     ```
+   * The application will be accessible at `http://localhost:3000`.
