@@ -9,6 +9,10 @@ import com.project.CodeWar.repository.RoomProblemRepository;
 import com.project.CodeWar.security.util.AuthUtil;
 import com.project.CodeWar.service.ProblemService;
 import com.project.CodeWar.service.RoomService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Room", description = "Create, join and manage coding battle rooms")
 @RestController
 @RequestMapping("/api/room")
 public class RoomController {
@@ -41,6 +46,11 @@ public class RoomController {
     @Value("${frontend.url}")
     private String frontendUrl;
 
+    @Operation(summary = "Create a new room", description = "Generates room code and invite link")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Room created successfully"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PostMapping("/create")
     public ResponseEntity<?> createRoom() {
         try {
@@ -59,6 +69,11 @@ public class RoomController {
         }
     }
 
+    @Operation(summary = "Join a room by code")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Joined successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid room code")
+    })
     @PostMapping("/join/{roomCode}")
     public ResponseEntity<?> joinRoom(@PathVariable String roomCode) {
         try {
@@ -75,6 +90,11 @@ public class RoomController {
         }
     }
 
+    @Operation(summary = "Get room details")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Room found"),
+            @ApiResponse(responseCode = "404", description = "Room not found")
+    })
     @GetMapping("/{roomCode}")
     public ResponseEntity<?> getRoom(@PathVariable String roomCode) {
         try {
@@ -95,6 +115,7 @@ public class RoomController {
         }
     }
 
+    @Operation(summary = "Get all rooms of logged-in user")
     @GetMapping("/my-rooms")
     public ResponseEntity<?> getMyRooms() {
         try {
@@ -107,6 +128,11 @@ public class RoomController {
         }
     }
 
+    @Operation(summary = "Update room status")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Status updated"),
+            @ApiResponse(responseCode = "403", description = "Not authorized")
+    })
     @PutMapping("/{roomCode}/status")
     public ResponseEntity<?> updateRoomStatus(@PathVariable String roomCode,
                                               @RequestParam RoomStatus status) {
@@ -124,6 +150,7 @@ public class RoomController {
         }
     }
 
+    @Operation(summary = "Get CF ratings of all room participants")
     @GetMapping("/{roomCode}/ratings")
     public ResponseEntity<?> getRoomRatings(@PathVariable String roomCode) {
         try {
@@ -138,6 +165,7 @@ public class RoomController {
         }
     }
 
+    @Operation(summary = "Get calculated problem rating for room")
     @GetMapping("/{roomCode}/problem-rating")
     public ResponseEntity<?> getProblemRating(@PathVariable String roomCode) {
         try {
@@ -152,6 +180,7 @@ public class RoomController {
         }
     }
 
+    @Operation(summary = "Pick a problem for the room based on average rating")
     @PostMapping("/{roomCode}/pick-problem")
     public ResponseEntity<?> pickProblem(@PathVariable String roomCode) {
         try {
@@ -170,6 +199,7 @@ public class RoomController {
         }
     }
 
+    @Operation(summary = "Get all problems assigned to room")
     @GetMapping("/{roomCode}/problems")
     public ResponseEntity<?> getRoomProblems(@PathVariable String roomCode) {
         try {
@@ -192,6 +222,7 @@ public class RoomController {
         }
     }
 
+    @Operation(summary = "Get latest assigned problem for room")
     @GetMapping("/{roomCode}/current-problem")
     public ResponseEntity<?> getCurrentProblem(@PathVariable String roomCode) {
         try {

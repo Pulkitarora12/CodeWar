@@ -3,6 +3,10 @@ package com.project.CodeWar.controller;
 import com.project.CodeWar.dtos.CfUser;
 import com.project.CodeWar.security.util.AuthUtil;
 import com.project.CodeWar.service.CodeforcesService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Tag(name = "Codeforces", description = "Link and verify Codeforces handle")
 @RestController
 @RequestMapping("/api/codeforces")
 public class CodeforcesController {
@@ -20,6 +25,7 @@ public class CodeforcesController {
     @Autowired
     private AuthUtil authUtil;
 
+    @Operation(summary = "Generate CF verification token", description = "Add this token to your Codeforces first name to verify")
     @PostMapping("/generate-token")
     public ResponseEntity<?> generateToken(@RequestParam String handle) {
         try {
@@ -35,6 +41,11 @@ public class CodeforcesController {
         }
     }
 
+    @Operation(summary = "Verify Codeforces handle", description = "Checks if token exists in CF first name")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Handle verified"),
+            @ApiResponse(responseCode = "400", description = "Token not found in CF profile")
+    })
     @PostMapping("/verify")
     public ResponseEntity<?> verifyHandle() {
         try {
@@ -52,6 +63,7 @@ public class CodeforcesController {
         }
     }
 
+    @Operation(summary = "Unlink Codeforces account")
     @DeleteMapping("/unlink")
     public ResponseEntity<?> unlinkHandle() {
         try {
@@ -64,6 +76,7 @@ public class CodeforcesController {
         }
     }
 
+    @Operation(summary = "Get CF verification status of logged-in user")
     @GetMapping("/status")
     public ResponseEntity<?> getStatus() {
         try {
@@ -79,6 +92,11 @@ public class CodeforcesController {
         }
     }
 
+    @Operation(summary = "Get CF rating by user ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Rating fetched"),
+            @ApiResponse(responseCode = "400", description = "User not found or handle not linked")
+    })
     @GetMapping("/rating/user/{userId}")
     public ResponseEntity<?> getUserRatingByUserId(@PathVariable Long userId) {
         try {
