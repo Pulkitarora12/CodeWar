@@ -19,10 +19,6 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
 import java.util.HashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -31,15 +27,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
 public class ContestServiceImpl implements ContestService {
 
     private static final Logger logger = LoggerFactory.getLogger(ContestServiceImpl.class);
-
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
-
     @Autowired
     private ContestRepository contestRepository;
 
@@ -129,11 +124,13 @@ public class ContestServiceImpl implements ContestService {
         contest.setStatus(ContestStatus.ACTIVE);
         contestRepository.save(contest);
 
-        contestRepository.save(contest);
-
         // update room status
         room.setStatus(RoomStatus.IN_PROGRESS);
         roomRepository.save(room);
+
+        // Schedule contest end auto-transition
+        long delaySeconds = Duration.between(startTime, endTime).getSeconds();
+        scheduleContestEnd(contest.getId(), delaySeconds);
 
         logger.info("Contest created with id: {} for room: {}", contest.getId(), roomCode);
 
@@ -257,6 +254,28 @@ public class ContestServiceImpl implements ContestService {
 
         submissionRepository.save(submission);
 
+        // Check if all participants in the room have solved the problem
+        Room room = contest.getRoomProblem().getRoom();
+        List<User> participants = room.getParticipants();
+        
+        List<Submission> allContestSubmissions = submissionRepository.findByContestId(contestId);
+        java.util.Set<Long> solvedUserIds = allContestSubmissions.stream()
+                .filter(Submission::isSolved)
+                .map(s -> s.getUser().getUserId())
+                .collect(Collectors.toSet());
+
+        boolean allSolved = participants.stream()
+                .allMatch(p -> solvedUserIds.contains(p.getUserId()));
+
+        if (allSolved) {
+            logger.info("All participants have solved the problem. Ending contest {} early.", contestId);
+            try {
+                endContest(contestId);
+            } catch (Exception e) {
+                logger.error("Failed to end contest automatically after all solved", e);
+            }
+        }
+
         // 8. Construct Final Response
         Map<String, Object> result = new HashMap<>();
         result.put("solved", solved);
@@ -275,7 +294,7 @@ public class ContestServiceImpl implements ContestService {
                 .orElseThrow(() -> new RuntimeException("Contest not found"));
 
         if (contest.getStatus() == ContestStatus.COMPLETED) {
-            throw new RuntimeException("Contest is already completed");
+            return; // Already ended, do nothing
         }
 
         // assign score=0 to all participants who didn't solve
@@ -293,7 +312,21 @@ public class ContestServiceImpl implements ContestService {
         contest.setStatus(ContestStatus.COMPLETED);
         contestRepository.save(contest);
 
-        logger.info("Contest {} marked as COMPLETED", contestId);
+        // Update room status back to WAITING when contest completes
+        Room room = contest.getRoomProblem().getRoom();
+        room.setStatus(RoomStatus.WAITING);
+        roomRepository.save(room);
+
+        logger.info("Contest {} marked as COMPLETED, room status set back to WAITING", contestId);
+
+        // Broadcast the final leaderboard and status to WebSocket subscribers
+        try {
+            LeaderboardResponse updatedLeaderboard = getLeaderboard(contestId);
+            messagingTemplate.convertAndSend("/topic/contest/" + contestId + "/leaderboard", updatedLeaderboard);
+            logger.info("Broadcasted final leaderboard for contest {}", contestId);
+        } catch (Exception e) {
+            logger.error("Failed to broadcast final leaderboard for contest {}", contestId, e);
+        }
     }
 
     private void saveScore(Contest contest, User user, int score) {
@@ -405,6 +438,6 @@ public class ContestServiceImpl implements ContestService {
                 })
                 .toList();
 
-        return new LeaderboardResponse(contestId, entries);
+        return new LeaderboardResponse(contestId, entries, contest.getStatus().toString());
     }
 }

@@ -19,6 +19,8 @@ const Contest = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
+  const [endTime, setEndTime] = useState(null);
+  const [timeLeft, setTimeLeft] = useState("");
   const stompClientRef = useRef(null);
 
   const fetchContestData = useCallback(async () => {
@@ -37,6 +39,9 @@ const Contest = () => {
       });
       setLeaderboard(res.data.leaderboard || []);
       setContestStatus(res.data.status);
+      if (res.data.endTime) {
+        setEndTime(res.data.endTime);
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load contest data.");
     } finally {
@@ -48,6 +53,45 @@ const Contest = () => {
   useEffect(() => {
     fetchContestData();
   }, [fetchContestData]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!endTime) return;
+
+    if (contestStatus === "COMPLETED") {
+      setTimeLeft("Ended");
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const difference = new Date(endTime) - new Date();
+      if (difference <= 0) {
+        setTimeLeft("Ended");
+        // Trigger a fetch to refresh page data (updates contest status and leaderboard)
+        fetchContestData();
+        return;
+      }
+
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+      setTimeLeft(`${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`);
+    };
+
+    calculateTimeLeft(); // run immediately
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [endTime, contestStatus, fetchContestData]);
+
+  const formatEndTime = (isoString) => {
+    if (!isoString) return "";
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return "";
+    }
+  };
 
   // WebSocket connection for real-time leaderboard updates
   useEffect(() => {
@@ -61,6 +105,9 @@ const Contest = () => {
         (message) => {
           const data = JSON.parse(message.body);
           setLeaderboard(data.entries || []);
+          if (data.status) {
+            setContestStatus(data.status);
+          }
         }
       );
     }, (err) => {
@@ -151,6 +198,43 @@ const Contest = () => {
             )}
           </div>
         </div>
+
+        {endTime && (
+          <div className="contest-timer-bar" style={{
+            display: "flex",
+            gap: "24px",
+            alignItems: "center",
+            marginTop: "16px",
+            padding: "12px 18px",
+            background: "rgba(255, 255, 255, 0.03)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "var(--radius-sm)",
+          }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Ending At
+              </span>
+              <span style={{ fontSize: "0.95rem", fontWeight: "700", color: "var(--text-primary)" }}>
+                {formatEndTime(endTime)}
+              </span>
+            </div>
+            <div style={{ height: "24px", width: "1px", background: "var(--border-subtle)" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Time Left
+              </span>
+              <span style={{ 
+                fontSize: "1.1rem", 
+                fontWeight: "800", 
+                color: timeLeft === "Ended" ? "var(--error)" : "var(--accent)",
+                fontFamily: "monospace",
+                textShadow: timeLeft === "Ended" ? "none" : "0 0 10px var(--accent-glow)"
+              }}>
+                {timeLeft}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {error && (

@@ -123,6 +123,7 @@ public class RoomServiceImpl implements RoomService {
 
         room.setStatus(status);
         roomRepository.save(room);
+
         logger.info("Room {} status updated to {}", roomCode, status);
     }
 

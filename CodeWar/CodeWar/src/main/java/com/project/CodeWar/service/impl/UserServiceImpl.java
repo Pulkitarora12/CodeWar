@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -45,6 +46,8 @@ public class UserServiceImpl implements UserService {
 
     @Value("${frontend.url}")
     private String frontendUrl;
+
+
 
     @Override
     public void updateUserRole(Long userId, String roleName) {

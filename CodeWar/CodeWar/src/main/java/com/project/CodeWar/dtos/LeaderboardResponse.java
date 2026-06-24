@@ -9,4 +9,5 @@ import java.util.List;
 public class LeaderboardResponse {
     private Long contestId;
     private List<LeaderboardEntryDTO> entries;
+    private String status;
 }

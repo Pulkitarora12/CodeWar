@@ -57,11 +57,16 @@ public class ProblemServiceImpl implements ProblemService {
             throw new RuntimeException("Could not fetch problems from Codeforces");
         }
 
+        // Fetch all used problems for this room to avoid N+1 queries in the stream filter
+        List<RoomProblem> usedProblems = roomProblemRepository.findByRoom(room);
+        java.util.Set<String> usedProblemKeys = usedProblems.stream()
+                .map(p -> p.getContestId() + "_" + p.getProblemIndex())
+                .collect(Collectors.toSet());
+
         // Step 4 — filter by rating, exclude used, sort by contestId descending (latest first)
         List<CfProblem> filtered = response.getResult().getProblems().stream()
                 .filter(p -> p.getRating() != null && p.getRating().equals(problemRating))
-                .filter(p -> !roomProblemRepository.existsByRoomAndContestIdAndProblemIndex(
-                        room, p.getContestId(), p.getIndex()))
+                .filter(p -> !usedProblemKeys.contains(p.getContestId() + "_" + p.getIndex()))
                 .sorted(Comparator.comparingInt(CfProblem::getContestId).reversed()) // ← sort latest first
                 .collect(Collectors.toList());
 
