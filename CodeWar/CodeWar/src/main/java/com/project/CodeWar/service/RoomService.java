@@ -1,6 +1,5 @@
 package com.project.CodeWar.service;
 
-import com.project.CodeWar.dtos.CfUser;
 import com.project.CodeWar.entity.Room;
 import com.project.CodeWar.entity.RoomStatus;
 

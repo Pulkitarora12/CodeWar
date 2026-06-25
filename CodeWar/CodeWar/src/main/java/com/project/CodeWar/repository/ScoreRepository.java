@@ -1,7 +1,6 @@
 package com.project.CodeWar.repository;
 
 import com.project.CodeWar.entity.Contest;
-import com.project.CodeWar.entity.Room;
 import com.project.CodeWar.entity.Score;
 import com.project.CodeWar.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -1,7 +1,6 @@
 package com.project.CodeWar.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.project.CodeWar.entity.AppRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

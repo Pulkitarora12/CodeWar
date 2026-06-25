@@ -1,6 +1,5 @@
 package com.project.CodeWar.controller;
 
-import com.project.CodeWar.dtos.CfUser;
 import com.project.CodeWar.entity.Room;
 import com.project.CodeWar.entity.RoomProblem;
 import com.project.CodeWar.entity.RoomStatus;
