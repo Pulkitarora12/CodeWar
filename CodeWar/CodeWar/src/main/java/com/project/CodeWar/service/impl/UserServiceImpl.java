@@ -16,7 +16,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -47,8 +46,6 @@ public class UserServiceImpl implements UserService {
     @Value("${frontend.url}")
     private String frontendUrl;
 
-
-
     @Override
     public void updateUserRole(Long userId, String roleName) {
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
@@ -59,7 +56,6 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
-
     @Override
     public List<User> getAllUsers() {
         return userRepository.findAll();
@@ -67,7 +63,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDTO getUserById(Long id) {
-        User user = userRepository.findById(id).orElseThrow();
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         return convertToDto(user);
     }
 
@@ -108,7 +105,6 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Failed to update password");
         }
     }
-
 
     @Override
     public void updateAccountLockStatus(Long userId, boolean lock) {
@@ -157,7 +153,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void resetPassword(String token, String newPassword) {
-
         PasswordResetToken passToken = resetTokenRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Token not found"));
 
@@ -191,7 +186,4 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
         return user;
     }
-
-
-
 }
