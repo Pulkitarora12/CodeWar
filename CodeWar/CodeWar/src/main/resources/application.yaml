@@ -1,17 +1,20 @@
 spring:
   application:
     name: CodeWar
+  app:
+    jwtSecret: ${JWT_SECRET}
+    jwtExpirationMs: ${JWT_EXPIRATION}
 
   datasource:
     url: jdbc:mysql://localhost:3306/${DB_NAME}
-    username: ${DB_USERNAME}  # Default is usually 'root'
+    username: ${DB_USERNAME} 
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update         # Automatically creates/updates tables based on your Java entities
-    show-sql: true             # Useful for debugging; shows the queries in your console
+      ddl-auto: update       
+    show-sql: true            
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
