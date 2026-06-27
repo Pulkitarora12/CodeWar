@@ -5,9 +5,9 @@ import com.project.CodeWar.entity.Room;
 import com.project.CodeWar.entity.RoomStatus;
 import com.project.CodeWar.entity.User;
 import com.project.CodeWar.repository.RoomRepository;
-import com.project.CodeWar.repository.UserRepository;
 import com.project.CodeWar.service.CodeforcesService;
 import com.project.CodeWar.service.RoomService;
+import com.project.CodeWar.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +28,7 @@ public class RoomServiceImpl implements RoomService {
     private RoomRepository roomRepository;
 
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Autowired
     private CodeforcesService codeforcesService;
@@ -40,8 +40,7 @@ public class RoomServiceImpl implements RoomService {
     public Room createRoom(Long userId) {
         logger.info("Creating room for userId: {}", userId);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userService.getUserEntityById(userId);
 
         String roomCode = generateUniqueRoomCode();
         logger.info("Generated room code: {}", roomCode);
@@ -68,8 +67,7 @@ public class RoomServiceImpl implements RoomService {
             throw new RuntimeException("Room is already completed");
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userService.getUserEntityById(userId);
 
         boolean alreadyIn = room.getParticipants().stream()
                 .anyMatch(p -> p.getUserId().equals(userId));
@@ -96,8 +94,7 @@ public class RoomServiceImpl implements RoomService {
     @Override
     public List<Room> getRoomsByUser(Long userId) {
         logger.info("Fetching rooms for userId: {}", userId);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userService.getUserEntityById(userId);
         return roomRepository.findByParticipantsContaining(user);
     }
 

@@ -3,7 +3,6 @@ package com.project.CodeWar.controller;
 import com.project.CodeWar.dtos.UserDTO;
 import com.project.CodeWar.entity.Role;
 import com.project.CodeWar.entity.User;
-import com.project.CodeWar.repository.RoleRepository;
 import com.project.CodeWar.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -26,8 +25,6 @@ public class AdminController {
     @Autowired
     UserService userService;
 
-    @Autowired
-    RoleRepository roleRepository;
 
     @Operation(summary = "Get all users")
     @GetMapping("/getusers")
@@ -59,7 +56,7 @@ public class AdminController {
     @Operation(summary = "Get all roles")
     @GetMapping("/roles")
     public List<Role> getAllRoles() {
-        return roleRepository.findAll();
+        return userService.getAllRoles();
     }
 
     @Operation(summary = "Set account expiry status")

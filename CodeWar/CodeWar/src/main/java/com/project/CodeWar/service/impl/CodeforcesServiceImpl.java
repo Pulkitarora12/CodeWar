@@ -7,6 +7,7 @@ import com.project.CodeWar.dtos.CfUser;
 import com.project.CodeWar.entity.User;
 import com.project.CodeWar.repository.UserRepository;
 import com.project.CodeWar.service.CodeforcesService;
+import com.project.CodeWar.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ public class CodeforcesServiceImpl implements CodeforcesService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private UserService userService;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     private static final String CF_API_URL = "https://codeforces.com/api/user.info?handles=";
@@ -35,8 +39,7 @@ public class CodeforcesServiceImpl implements CodeforcesService {
     public String generateVerificationToken(Long userId, String handle) {
         logger.info("Generating verification token for userId: {} with handle: {}", userId, handle);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userService.getUserEntityById(userId);
 
         String token = "cw-" + UUID.randomUUID().toString().substring(0, 8);
         logger.info("Generated token: {} for handle: {}", token, handle);
@@ -54,8 +57,7 @@ public class CodeforcesServiceImpl implements CodeforcesService {
     public boolean verifyHandle(Long userId) {
         logger.info("Starting verification for userId: {}", userId);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userService.getUserEntityById(userId);
 
         String handle = user.getCodeforcesHandle();
         String token = user.getCodeforcesVerificationToken();
@@ -95,8 +97,7 @@ public class CodeforcesServiceImpl implements CodeforcesService {
     public void unlinkHandle(Long userId) {
         logger.info("Unlinking CF handle for userId: {}", userId);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userService.getUserEntityById(userId);
 
         user.setCodeforcesHandle(null);
         user.setCodeforcesVerified(false);
@@ -126,8 +127,7 @@ public class CodeforcesServiceImpl implements CodeforcesService {
     public CfUser getUserRatingByUserId(Long userId) {
         logger.info("Fetching CF rating for userId: {}", userId);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userService.getUserEntityById(userId);
 
         if (user.getCodeforcesHandle() == null || !user.isCodeforcesVerified()) {
             logger.warn("User {} has no verified CF handle", userId);

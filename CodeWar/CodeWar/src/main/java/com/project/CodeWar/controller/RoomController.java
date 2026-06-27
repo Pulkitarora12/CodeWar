@@ -4,7 +4,6 @@ import com.project.CodeWar.entity.Room;
 import com.project.CodeWar.entity.RoomProblem;
 import com.project.CodeWar.entity.RoomStatus;
 import com.project.CodeWar.entity.User;
-import com.project.CodeWar.repository.RoomProblemRepository;
 import com.project.CodeWar.security.util.AuthUtil;
 import com.project.CodeWar.service.ProblemService;
 import com.project.CodeWar.service.RoomService;
@@ -39,8 +38,6 @@ public class RoomController {
     @Autowired
     private ProblemService problemService;
 
-    @Autowired
-    private RoomProblemRepository roomProblemRepository;
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -202,8 +199,7 @@ public class RoomController {
     @GetMapping("/{roomCode}/problems")
     public ResponseEntity<?> getRoomProblems(@PathVariable String roomCode) {
         try {
-            Room room = roomService.getRoomByCode(roomCode);
-            List<RoomProblem> problems = roomProblemRepository.findByRoom(room);
+            List<RoomProblem> problems = problemService.getRoomProblems(roomCode);
             return ResponseEntity.ok(Map.of(
                     "roomCode", roomCode,
                     "problems", problems.stream().map(p -> Map.of(
@@ -225,9 +221,7 @@ public class RoomController {
     @GetMapping("/{roomCode}/current-problem")
     public ResponseEntity<?> getCurrentProblem(@PathVariable String roomCode) {
         try {
-            Room room = roomService.getRoomByCode(roomCode);
-            RoomProblem problem = roomProblemRepository
-                    .findTopByRoomOrderByAssignedAtDesc(room)
+            RoomProblem problem = problemService.getCurrentProblem(roomCode)
                     .orElseThrow(() -> new RuntimeException("No problem assigned yet"));
             return ResponseEntity.ok(Map.of(
                     "problemName", problem.getProblemName(),

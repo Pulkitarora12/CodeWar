@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -94,5 +95,22 @@ public class ProblemServiceImpl implements ProblemService {
 
         logger.info("Problem saved to DB for room: {}", roomCode);
         return roomProblem;
+    }
+
+    @Override
+    public List<RoomProblem> getRoomProblems(String roomCode) {
+        Room room = roomRepository.findByRoomCode(roomCode).orElseThrow(() -> new RuntimeException("Room not found"));
+        List<RoomProblem> problems = roomProblemRepository.findByRoom(room);
+        return problems;
+    }
+
+    @Override
+    public Optional<RoomProblem> getCurrentProblem(String roomCode) {
+        Room room = roomRepository.findByRoomCode(roomCode).orElseThrow(() -> new RuntimeException("Room not found"));
+        List<RoomProblem> problems = roomProblemRepository.findByRoom(room);
+        if (problems.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(problems.get(problems.size() - 1));
     }
 }

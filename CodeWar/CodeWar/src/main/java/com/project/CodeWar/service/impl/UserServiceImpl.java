@@ -186,4 +186,34 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
         return user;
     }
+
+    @Override
+    public User getUserEntityById(Long id) {
+        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        return user;
+    }
+
+    @Override
+    public boolean existsByUsername(String username) {
+        User user = userRepository.findByUserName(username).orElseThrow(() -> new RuntimeException("User not found"));
+        return user != null;
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        return user != null;
+    }
+
+    @Override
+    public Role findRoleByName(AppRole role) {
+        Role ans = roleRepository.findByRoleName(role).orElseThrow(() -> new RuntimeException("Role not found"));
+        return ans;
+    }
+
+    @Override
+    public List<Role> getAllRoles() {
+        List<Role> ans = roleRepository.findAll();
+        return ans;
+    }
 }

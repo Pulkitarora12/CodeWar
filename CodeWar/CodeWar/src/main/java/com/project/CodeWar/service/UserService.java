@@ -2,6 +2,8 @@ package com.project.CodeWar.service;
 
 import com.project.CodeWar.dtos.UserDTO;
 import com.project.CodeWar.entity.User;
+import com.project.CodeWar.entity.Role;
+import com.project.CodeWar.entity.AppRole;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,4 +34,14 @@ public interface UserService {
     Optional<User> findByEmail(String email);
 
     User registerUser(User user);
+
+    User getUserEntityById(Long id);
+
+    boolean existsByUsername(String username);
+
+    boolean existsByEmail(String email);
+
+    Role findRoleByName(AppRole role);
+
+    List<Role> getAllRoles();
 }

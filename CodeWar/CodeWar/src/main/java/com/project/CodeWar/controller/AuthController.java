@@ -3,8 +3,6 @@ package com.project.CodeWar.controller;
 import com.project.CodeWar.entity.AppRole;
 import com.project.CodeWar.entity.Role;
 import com.project.CodeWar.entity.User;
-import com.project.CodeWar.repository.RoleRepository;
-import com.project.CodeWar.repository.UserRepository;
 import com.project.CodeWar.security.jwt.JwtUtils;
 import com.project.CodeWar.security.request.LoginRequest;
 import com.project.CodeWar.security.request.SignupRequest;
@@ -51,11 +49,6 @@ public class AuthController {
     @Autowired
     PasswordEncoder encoder;
 
-    @Autowired
-    UserRepository userRepository;
-
-    @Autowired
-    RoleRepository roleRepository;
 
     @Autowired
     JwtUtils jwtUtils;
@@ -110,11 +103,11 @@ public class AuthController {
     })
     @PostMapping("/public/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
-        if (userRepository.existsByUserName(signUpRequest.getUsername())) {
+        if (userService.existsByUsername(signUpRequest.getUsername())) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
         }
 
-        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+        if (userService.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is already in use!"));
         }
 
@@ -126,16 +119,13 @@ public class AuthController {
         Role role;
 
         if (strRoles == null || strRoles.isEmpty()) {
-            role = roleRepository.findByRoleName(AppRole.ROLE_USER)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+            role = userService.findRoleByName(AppRole.ROLE_USER);
         } else {
             String roleStr = strRoles.iterator().next();
             if (roleStr.equals("admin")) {
-                role = roleRepository.findByRoleName(AppRole.ROLE_ADMIN)
-                        .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                role = userService.findRoleByName(AppRole.ROLE_ADMIN);
             } else {
-                role = roleRepository.findByRoleName(AppRole.ROLE_USER)
-                        .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                role = userService.findRoleByName(AppRole.ROLE_USER);
             }
         }
 
@@ -148,7 +138,7 @@ public class AuthController {
         user.setTwoFactorEnabled(false);
         user.setSignUpMethod("email");
         user.setRole(role);
-        userRepository.save(user);
+        userService.registerUser(user);
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
