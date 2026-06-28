@@ -163,3 +163,34 @@ detachedRoom.setParticipants(new ArrayList<>(room.getParticipants()));
 *   **Copying the elements:** By wrapping `room.getParticipants()` inside `new ArrayList<>(...)`, we pull all the users out of Hibernate's wrapper and place them into a standard, clean Java `ArrayList`.
 *   **Plain JSON in Redis:** Now, when Jackson serializes the detached room, it writes the collection type as `java.util.ArrayList`.
 *   **Flawless Deserialization:** Since `ArrayList` is a standard Java class that does not depend on database connections, Jackson can easily instantiate it upon lookup, resolving the error!
+
+---
+
+## 5. Under the Hood: Spring Cache Proxies & Self-Invocation
+
+To work with Spring Boot's caching system effectively, it is essential to understand the underlying proxy architecture and the self-invocation limitation.
+
+### How Spring Cache Works (The Proxy Pattern)
+Spring Cache is built on top of **Aspect-Oriented Programming (AOP)**. When you annotate a class method with `@Cacheable`, `@CacheEvict`, or `@CachePut`, Spring does not call your target service class directly.
+
+1.  **Proxy Creation:** At startup, the Spring Container generates a dynamic wrapper class (a Proxy) around your service bean.
+2.  **Call Interception:** When another component (like a Controller) autowires and calls your service, it calls the Proxy instead.
+3.  **Caching Logic:** The Proxy intercepts the call. It checks Redis to see if the value is cached:
+    *   **Cache Hit:** It bypasses your code entirely and returns the cached value.
+    *   **Cache Miss:** It forwards the call to your actual service method, saves the returned value to Redis, and returns it.
+
+### The Self-Invocation Problem
+Because Spring caching relies on this external Proxy interceptor, the caching annotations **only trigger when a call comes from outside the service class**.
+
+If a method within the service calls another method in the same service (e.g., `this.endContest()`), it bypasses the Proxy and executes a direct Java method call on the raw object. As a result, annotations like `@CacheEvict` are ignored, and the Redis cache is not updated.
+
+### The Solution: Lazy Self-Injection
+To resolve the self-invocation issue and force internal calls through Spring's caching proxy, we use the **Self-Injection Pattern**:
+
+1.  **Autowire a Self Proxy:** We inject the service's own interface into itself using the `@Lazy` annotation to prevent a circular dependency loop at startup:
+    ```java
+    @Autowired
+    @Lazy
+    private ContestService self;
+    ```
+2.  **Invoke via the Proxy:** Instead of calling the internal method directly (`endContest()`), we call it through the injected proxy (`self.endContest()`). This routes the internal call back through the Spring AOP wrapper, triggering the cache eviction correctly.
