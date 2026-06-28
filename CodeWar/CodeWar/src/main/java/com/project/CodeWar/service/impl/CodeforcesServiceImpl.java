@@ -1,6 +1,7 @@
 package com.project.CodeWar.service.impl;
 
 import com.project.CodeWar.dtos.CfApiResponse;
+import com.project.CodeWar.dtos.CfProblemsetResponse;
 import com.project.CodeWar.dtos.CfSubmission;
 import com.project.CodeWar.dtos.CfSubmissionResponse;
 import com.project.CodeWar.dtos.CfUser;
@@ -37,6 +38,7 @@ public class CodeforcesServiceImpl implements CodeforcesService {
 
     private static final String CF_USER_STATUS_URL = "https://codeforces.com/api/user.status?handle={handle}&from=1&count={count}";
 
+    private static final String CF_PROBLEMSET_URL = "https://codeforces.com/api/problemset.problems";
 
     @Override
     @CacheEvict(cacheNames = "cfRatings", key = "#userId")
@@ -162,5 +164,12 @@ public class CodeforcesServiceImpl implements CodeforcesService {
 
         logger.info("Fetched {} submissions for handle: {}", response.getResult().size(), handle);
         return response.getResult();
+    }
+
+    @Override
+    @Cacheable(cacheNames = "cfProblemset", key = "'all'")
+    public CfProblemsetResponse getProblemset() {
+        logger.info("Hitting CF problemset API");
+        return restTemplate.getForObject(CF_PROBLEMSET_URL, CfProblemsetResponse.class);
     }
 }

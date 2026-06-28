@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import com.project.CodeWar.service.CodeforcesService;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -25,8 +27,6 @@ public class ProblemServiceImpl implements ProblemService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProblemServiceImpl.class);
 
-    private static final String CF_PROBLEMSET_URL = "https://codeforces.com/api/problemset.problems";
-
     @Autowired
     private RoomRepository roomRepository;
 
@@ -35,6 +35,9 @@ public class ProblemServiceImpl implements ProblemService {
 
     @Autowired
     private RoomService roomService;
+
+    @Autowired
+    private CodeforcesService codeforcesService;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -49,10 +52,11 @@ public class ProblemServiceImpl implements ProblemService {
         // Step 2 — calculate problem rating
         int problemRating = roomService.calculateProblemRating(roomCode);
         logger.info("Calculated problem rating: {} for room: {}", problemRating, roomCode);
+        
+        // Step 3 — fetch all problems from CF API (now cached)
+        logger.info("Fetching CF problemset");
+        CfProblemsetResponse response = codeforcesService.getProblemset();
 
-        // Step 3 — fetch all problems from CF API
-        logger.info("Hitting CF problemset API");
-        CfProblemsetResponse response = restTemplate.getForObject(CF_PROBLEMSET_URL, CfProblemsetResponse.class);
 
         if (response == null || !"OK".equals(response.getStatus())) {
             throw new RuntimeException("Could not fetch problems from Codeforces");
