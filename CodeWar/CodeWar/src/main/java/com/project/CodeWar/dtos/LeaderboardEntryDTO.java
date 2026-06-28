@@ -7,7 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class LeaderboardEntryDTO {
+public class LeaderboardEntryDTO implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     private String username;
     private int score;
     private Long timeTakenSeconds;

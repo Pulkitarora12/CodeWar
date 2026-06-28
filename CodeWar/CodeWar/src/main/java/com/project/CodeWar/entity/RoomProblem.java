@@ -11,7 +11,9 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @Table(name = "room_problems")
-public class RoomProblem {
+public class RoomProblem implements java.io.Serializable {
+    
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

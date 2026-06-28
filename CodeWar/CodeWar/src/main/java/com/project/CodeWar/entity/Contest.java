@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @Table(name = "contests")
-public class Contest {
+public class Contest implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

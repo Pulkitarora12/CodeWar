@@ -16,6 +16,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
 import java.util.HashMap;
@@ -96,6 +99,7 @@ public class ContestServiceImpl implements ContestService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"contests", "leaderboards"}, allEntries = true)
     public Map<String, Object> startContest(String roomCode) {
         logger.info("Starting contest for room: {}", roomCode);
 
@@ -144,6 +148,7 @@ public class ContestServiceImpl implements ContestService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"contests", "leaderboards"}, allEntries = true)
     public Map<String, Object> checkSubmission(Long contestId) {
         logger.info("Checking submission for contestId: {}", contestId);
 
@@ -286,6 +291,7 @@ public class ContestServiceImpl implements ContestService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"contests", "leaderboards"}, allEntries = true)
     public void endContest(Long contestId) {
         logger.info("Ending contest: {}", contestId);
 
@@ -356,6 +362,7 @@ public class ContestServiceImpl implements ContestService {
     }
 
     @Override
+    @Cacheable(cacheNames = "contests", key = "'room::' + #roomCode")
     public List<Map<String, Object>> getContestsByRoom(String roomCode) {
         Room room = roomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new RuntimeException("Room not found"));
@@ -378,6 +385,7 @@ public class ContestServiceImpl implements ContestService {
     }
 
     @Override
+    @Cacheable(cacheNames = "contests", key = "#contestId")
     public Map<String, Object> getContestDetails(Long contestId) {
         Contest contest = contestRepository.findById(contestId)
                 .orElseThrow(() -> new RuntimeException("Contest not found"));
@@ -399,6 +407,7 @@ public class ContestServiceImpl implements ContestService {
     }
 
     @Override
+    @Cacheable(cacheNames = "leaderboards", key = "#contestId")
     public LeaderboardResponse getLeaderboard(Long contestId) {
         // 1. Verify contest exists
         Contest contest = contestRepository.findById(contestId)
