@@ -14,6 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -36,6 +39,7 @@ public class CodeforcesServiceImpl implements CodeforcesService {
 
 
     @Override
+    @CacheEvict(cacheNames = "cfRatings", key = "#userId")
     public String generateVerificationToken(Long userId, String handle) {
         logger.info("Generating verification token for userId: {} with handle: {}", userId, handle);
 
@@ -54,6 +58,7 @@ public class CodeforcesServiceImpl implements CodeforcesService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "cfRatings", key = "#userId")
     public boolean verifyHandle(Long userId) {
         logger.info("Starting verification for userId: {}", userId);
 
@@ -94,6 +99,7 @@ public class CodeforcesServiceImpl implements CodeforcesService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "cfRatings", key = "#userId")
     public void unlinkHandle(Long userId) {
         logger.info("Unlinking CF handle for userId: {}", userId);
 
@@ -124,6 +130,7 @@ public class CodeforcesServiceImpl implements CodeforcesService {
     }
 
     @Override
+    @Cacheable(cacheNames = "cfRatings", key = "#userId")
     public CfUser getUserRatingByUserId(Long userId) {
         logger.info("Fetching CF rating for userId: {}", userId);
 

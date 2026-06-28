@@ -5,7 +5,8 @@ import lombok.Data;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CfUser {
+public class CfUser implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     private String handle;
     private String firstName;
     private Integer rating;
