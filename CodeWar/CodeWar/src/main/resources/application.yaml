@@ -14,7 +14,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update       
-    show-sql: true            
+    show-sql: false            
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
@@ -56,3 +56,7 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     url: /api-docs
+
+logging:
+  level:
+    org.springframework.cache: debug

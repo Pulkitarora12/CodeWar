@@ -80,7 +80,6 @@ public class CodeforcesController {
     @GetMapping("/status")
     public ResponseEntity<?> getStatus() {
         try {
-            Long userId = authUtil.loggedInUserId();
             var user = authUtil.loggedInUser();
             return ResponseEntity.ok(Map.of(
                     "handle", user.getCodeforcesHandle() != null ? user.getCodeforcesHandle() : "",

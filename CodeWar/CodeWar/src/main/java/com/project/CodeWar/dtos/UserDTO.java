@@ -12,7 +12,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserDTO {
+public class UserDTO implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     private Long userId;
     private String userName;
     private String email;

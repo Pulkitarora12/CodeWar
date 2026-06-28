@@ -15,7 +15,8 @@ import java.util.Set;
 @AllArgsConstructor
 @Data
 @Table(name = "roles")
-public class Role{
+public class Role implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

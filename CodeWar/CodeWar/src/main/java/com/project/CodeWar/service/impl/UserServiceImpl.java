@@ -11,8 +11,12 @@ import com.project.CodeWar.repository.UserRepository;
 import com.project.CodeWar.security.util.AuthUtil;
 import com.project.CodeWar.service.EmailService;
 import com.project.CodeWar.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +28,8 @@ import java.util.UUID;
 
 @Service
 public class UserServiceImpl implements UserService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
     @Autowired
     EmailService emailService;
@@ -47,22 +53,14 @@ public class UserServiceImpl implements UserService {
     private String frontendUrl;
 
     @Override
-    public void updateUserRole(Long userId, String roleName) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        AppRole appRole = AppRole.valueOf(roleName);
-        Role role = roleRepository.findByRoleName(appRole)
-                .orElseThrow(() -> new RuntimeException("Role not found"));
-        user.setRole(role);
-        userRepository.save(user);
-    }
-
-    @Override
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
     @Override
+    @Cacheable(cacheNames = "userDTOs", key = "'id::' + #id")
     public UserDTO getUserById(Long id) {
+        logger.info("Database hit: Fetching UserDTO for id: {}", id);
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return convertToDto(user);
@@ -89,12 +87,30 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Cacheable(cacheNames = "users", key = "'username::' +  #username")
     public User findByUsername(String username) {
+        logger.info("Database hit: Fetching User by username: {}", username);
         Optional<User> user = userRepository.findByUserName(username);
         return user.orElseThrow(() -> new RuntimeException("User not found with username: " + username));
     }
 
     @Override
+    @Cacheable(cacheNames = "users", key = "'email::' + #email")
+    public Optional<User> findByEmail(String email) {
+        logger.info("Database hit: Fetching User by email: {}", email);
+        return userRepository.findByEmail(email);
+    }
+
+    @Override
+    @Cacheable(cacheNames = "users", key = "'id::' + #id")
+    public User getUserEntityById(Long id) {
+        logger.info("Database hit: Fetching User entity for id: {}", id);
+        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        return user;
+    }
+
+    @Override
+    @CacheEvict(cacheNames = {"users", "userDTOs"}, allEntries = true)
     public void updatePassword(Long userId, String password) {
         try {
             User user = userRepository.findById(userId)
@@ -107,6 +123,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"userDTOs", "users"}, allEntries = true)
+    public void updateUserRole(Long userId, String roleName) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        AppRole appRole = AppRole.valueOf(roleName);
+        Role role = roleRepository.findByRoleName(appRole)
+                .orElseThrow(() -> new RuntimeException("Role not found"));
+        user.setRole(role);
+        userRepository.save(user);
+    }
+
+    @Override
+    @CacheEvict(cacheNames = {"userDTOs", "users"}, allEntries = true)
     public void updateAccountLockStatus(Long userId, boolean lock) {
         User user = userRepository.findById(userId).orElseThrow(()
                 -> new RuntimeException("User not found"));
@@ -115,6 +143,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"users", "userDTOs"}, allEntries = true)
     public void updateAccountExpiryStatus(Long userId, boolean expire) {
         User user = userRepository.findById(userId).orElseThrow(()
                 -> new RuntimeException("User not found"));
@@ -123,6 +152,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"users", "userDTOs"}, allEntries = true)
     public void updateAccountEnabledStatus(Long userId, boolean enabled) {
         User user = userRepository.findById(userId).orElseThrow(()
                 -> new RuntimeException("User not found"));
@@ -131,6 +161,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"users", "userDTOs"}, allEntries = true)
     public void updateCredentialsExpiryStatus(Long userId, boolean expire) {
         User user = userRepository.findById(userId).orElseThrow(()
                 -> new RuntimeException("User not found"));
@@ -139,19 +170,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void generatePasswordResetToken(String email) {
-        User user = userRepository.findByEmail(email).
-                orElseThrow(() -> new RuntimeException("User not found"));
-        String token = UUID.randomUUID().toString();
-        Instant expiryDate = Instant.now().plus(24, ChronoUnit.HOURS);
-        PasswordResetToken passwordResetToken = new PasswordResetToken(token, user, expiryDate);
-        resetTokenRepository.save(passwordResetToken);
-
-        String resetUrl = frontendUrl + "/reset-password?token=" + token;
-        emailService.sendResetEmail(email, resetUrl);
-    }
-
-    @Override
+    @CacheEvict(cacheNames = {"users", "userDTOs"}, allEntries = true)
     public void resetPassword(String token, String newPassword) {
         PasswordResetToken passToken = resetTokenRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Token not found"));
@@ -174,11 +193,20 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
+    public void generatePasswordResetToken(String email) {
+        User user = userRepository.findByEmail(email).
+                orElseThrow(() -> new RuntimeException("User not found"));
+        String token = UUID.randomUUID().toString();
+        Instant expiryDate = Instant.now().plus(24, ChronoUnit.HOURS);
+        PasswordResetToken passwordResetToken = new PasswordResetToken(token, user, expiryDate);
+        resetTokenRepository.save(passwordResetToken);
+
+        String resetUrl = frontendUrl + "/reset-password?token=" + token;
+        emailService.sendResetEmail(email, resetUrl);
     }
 
     @Override
+    @CacheEvict(cacheNames = {"users", "userDTOs"}, allEntries = true)
     public User registerUser(User user) {
         if (user.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -188,22 +216,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User getUserEntityById(Long id) {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        return user;
-    }
-
-    @Override
     public boolean existsByUsername(String username) {
-        User user = userRepository.findByUserName(username).orElseThrow(() -> new RuntimeException("User not found"));
-        return user != null;
+        return userRepository.existsByUserName(username);
     }
 
     @Override
     public boolean existsByEmail(String email) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
-        return user != null;
+        return userRepository.existsByEmail(email);
     }
+
 
     @Override
     public Role findRoleByName(AppRole role) {
