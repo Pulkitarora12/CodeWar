@@ -25,7 +25,8 @@ CodeWar is a competitive coding battle platform where users can create rooms, jo
 - Spring Boot
 - Spring Security
 - JWT Authentication
-- Spring Data JPA
+- Spring Data JPA & Hibernate
+- Spring Data Redis (Docker-based Redis cache)
 - MySQL
 - Swagger / OpenAPI
 
@@ -34,6 +35,22 @@ CodeWar is a competitive coding battle platform where users can create rooms, jo
 - Vite
 - Axios
 - React Router
+
+---
+
+# ⚡ Caching Strategy (Redis)
+
+CodeWar integrates Redis caching to optimize database queries, minimize heavy computations, and protect the system from hitting external API rate limits.
+
+### Cached Data & TTLs:
+*   **User Data (`users`, `userDTOs` - 15 mins):** Caches user lookups by ID, username, and email to speed up filter chain security checks on every request.
+*   **Battle Rooms (`rooms` - 10 mins):** Caches room metadata and rooms by user ID to optimize lobby lookups.
+*   **User Roles (`roles` - 24 hours):** Caches static application user role configurations.
+*   **Codeforces Ratings (`cfRatings` - 10 mins):** Caches external API user profile fetches to prevent Codeforces API rate limit blocks.
+*   **Codeforces Problemset (`cfProblemset` - 12 hours):** Caches the massive Codeforces problem pool list to instantly pick random battle problems.
+*   **Contests & Leaderboards (`contests`, `leaderboards` - 5 mins / 2 mins):** Caches leaderboard scoreboards and lobby contest metadata.
+
+> 💡 For a detailed breakdown of all caching decisions, Spring/Redis configuration terms, serialization fixes, and Hibernate proxy solutions, please refer to the [caching developer guide](cacheable.md).
 
 ---
 
@@ -122,15 +139,8 @@ Authorization: Bearer YOUR_JWT_TOKEN
 
 # 📌 Future Improvements
 
-- WebSocket-based real-time contests
-- Live code editor
-- Multi-platform coding support
 - Contest analytics
 - Friend system
 - Global rankings
 
 ---
-
-# 👨‍💻 Author
-
-Pulkit Arora
