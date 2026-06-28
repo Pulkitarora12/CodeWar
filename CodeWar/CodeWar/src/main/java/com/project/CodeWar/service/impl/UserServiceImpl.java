@@ -227,12 +227,14 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
+    @Cacheable(cacheNames = "roles", key = "#role")
     public Role findRoleByName(AppRole role) {
         Role ans = roleRepository.findByRoleName(role).orElseThrow(() -> new RuntimeException("Role not found"));
         return ans;
     }
 
     @Override
+    @Cacheable(cacheNames = "roles", key = "'all'")
     public List<Role> getAllRoles() {
         List<Role> ans = roleRepository.findAll();
         return ans;

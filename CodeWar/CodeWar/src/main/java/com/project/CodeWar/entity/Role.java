@@ -30,7 +30,6 @@ public class Role implements java.io.Serializable {
 
     @OneToMany(mappedBy = "role", fetch = FetchType.LAZY, cascade = {CascadeType.MERGE})
     @JsonBackReference
-    @ToString.Exclude
     private Set<User> users = new HashSet<>();
 
     public Role(AppRole roleName) {
