@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import com.project.CodeWar.service.CodeforcesService;
 
@@ -38,8 +37,6 @@ public class ProblemServiceImpl implements ProblemService {
 
     @Autowired
     private CodeforcesService codeforcesService;
-
-    private final RestTemplate restTemplate = new RestTemplate();
 
     @Override
     public RoomProblem pickProblemForRoom(String roomCode) {
