@@ -17,6 +17,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.cache.annotation.CacheEvict;
 
 import jakarta.annotation.PostConstruct;
@@ -50,12 +51,6 @@ public class ContestServiceImpl implements ContestService {
     private RoomRepository roomRepository;
 
     @Autowired
-    private RoomProblemRepository roomProblemRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
     private CodeforcesService codeforcesService;
 
     @Autowired
@@ -66,6 +61,10 @@ public class ContestServiceImpl implements ContestService {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    @Lazy
+    private ContestService self;
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -90,7 +89,7 @@ public class ContestServiceImpl implements ContestService {
             } else {
                 logger.info("ContestId: {} already expired on startup — ending now", contest.getId());
                 try {
-                    endContest(contest.getId());
+                    self.endContest(contest.getId());
                 } catch (Exception e) {
                     logger.error("Failed to end expired contestId: {} — {}", contest.getId(), e.getMessage());
                 }
@@ -349,12 +348,13 @@ public class ContestServiceImpl implements ContestService {
                 user.getUserName(), contest.getId(), score);
     }
 
+
     private void scheduleContestEnd(Long contestId, long delaySeconds) {
         logger.info("Scheduling auto-end for contestId: {} after {}s", contestId, delaySeconds);
         scheduler.schedule(() -> {
             try {
                 logger.info("Auto-ending contestId: {}", contestId);
-                endContest(contestId);
+                self.endContest(contestId);
             } catch (Exception e) {
                 logger.error("Failed to auto-end contestId: {} — {}", contestId, e.getMessage());
             }
