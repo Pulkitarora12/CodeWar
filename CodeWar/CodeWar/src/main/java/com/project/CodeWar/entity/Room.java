@@ -13,7 +13,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @Table(name = "rooms")
-public class Room {
+public class Room implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

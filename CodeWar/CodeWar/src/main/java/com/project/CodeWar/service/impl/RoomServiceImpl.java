@@ -8,6 +8,10 @@ import com.project.CodeWar.repository.RoomRepository;
 import com.project.CodeWar.service.CodeforcesService;
 import com.project.CodeWar.service.RoomService;
 import com.project.CodeWar.service.UserService;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +41,7 @@ public class RoomServiceImpl implements RoomService {
     private String frontendUrl;
 
     @Override
+    @CacheEvict(cacheNames = "rooms", allEntries = true)
     public Room createRoom(Long userId) {
         logger.info("Creating room for userId: {}", userId);
 
@@ -57,6 +62,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "rooms", allEntries = true)
     public Room joinRoom(String roomCode, Long userId) {
         logger.info("User {} attempting to join room: {}", userId, roomCode);
 
@@ -85,17 +91,43 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
+    @Cacheable(cacheNames = "rooms", key = "#roomCode")
     public Room getRoomByCode(String roomCode) {
         logger.info("Fetching room with code: {}", roomCode);
-        return roomRepository.findByRoomCode(roomCode)
+        Room room = roomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new RuntimeException("Room not found"));
+
+        // Copy fields to a detached Room object with standard ArrayList to avoid PersistentBag serialization issues
+        Room detachedRoom = new Room();
+        detachedRoom.setId(room.getId());
+        detachedRoom.setRoomCode(room.getRoomCode());
+        detachedRoom.setStatus(room.getStatus());
+        detachedRoom.setCreatedAt(room.getCreatedAt());
+        detachedRoom.setCreatedBy(room.getCreatedBy());
+        detachedRoom.setParticipants(new ArrayList<>(room.getParticipants()));
+        return detachedRoom;
     }
 
+
     @Override
+    @Cacheable(cacheNames = "rooms", key = "'user::' + #userId")
     public List<Room> getRoomsByUser(Long userId) {
         logger.info("Fetching rooms for userId: {}", userId);
         User user = userService.getUserEntityById(userId);
-        return roomRepository.findByParticipantsContaining(user);
+        List<Room> rooms = roomRepository.findByParticipantsContaining(user);
+
+        List<Room> detachedRooms = new ArrayList<>();
+        for (Room room : rooms) {
+            Room detachedRoom = new Room();
+            detachedRoom.setId(room.getId());
+            detachedRoom.setRoomCode(room.getRoomCode());
+            detachedRoom.setStatus(room.getStatus());
+            detachedRoom.setCreatedAt(room.getCreatedAt());
+            detachedRoom.setCreatedBy(room.getCreatedBy());
+            detachedRoom.setParticipants(new ArrayList<>(room.getParticipants()));
+            detachedRooms.add(detachedRoom);
+        }
+        return detachedRooms;
     }
 
     private String generateUniqueRoomCode() {
@@ -107,6 +139,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "rooms", allEntries = true)
     public void updateRoomStatus(String roomCode, Long userId, RoomStatus status) {
         logger.info("Updating room {} status to {} by userId: {}", roomCode, status, userId);
 
