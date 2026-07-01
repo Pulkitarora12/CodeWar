@@ -85,9 +85,14 @@ public class CodeforcesServiceImpl implements CodeforcesService {
         }
 
         String firstName = response.getResult().get(0).getFirstName();
-        logger.info("CF API returned firstName: {} for handle: {}", firstName, handle);
+        String lastName = response.getResult().get(0).getLastName();
+        logger.info("CF API returned firstName: {}, lastName: {} for handle: {}", firstName, lastName, handle);
 
-        if (firstName != null && firstName.contains(token)) {
+        String cleanToken = token.trim().toLowerCase();
+        boolean match = (firstName != null && firstName.trim().toLowerCase().contains(cleanToken))
+                || (lastName != null && lastName.trim().toLowerCase().contains(cleanToken));
+
+        if (match) {
             logger.info("Token match found! Marking userId: {} as verified", userId);
             user.setCodeforcesVerified(true);
             user.setCodeforcesVerificationToken(null);
@@ -96,7 +101,7 @@ public class CodeforcesServiceImpl implements CodeforcesService {
             return true;
         }
 
-        logger.warn("Token mismatch for userId: {} — expected: {} in firstName: {}", userId, token, firstName);
+        logger.warn("Token mismatch for userId: {} — expected: {} in firstName: {} or lastName: {}", userId, token, firstName, lastName);
         return false;
     }
 

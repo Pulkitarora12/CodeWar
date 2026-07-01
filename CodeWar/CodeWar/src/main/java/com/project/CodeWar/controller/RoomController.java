@@ -236,4 +236,22 @@ public class RoomController {
                     .body(Map.of("message", e.getMessage()));
         }
     }
+
+    @Operation(summary = "Delete a room")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Room deleted successfully"),
+            @ApiResponse(responseCode = "403", description = "Not authorized"),
+            @ApiResponse(responseCode = "404", description = "Room not found")
+    })
+    @DeleteMapping("/{roomCode}")
+    public ResponseEntity<?> deleteRoom(@PathVariable String roomCode) {
+        try {
+            Long userId = authUtil.loggedInUserId();
+            roomService.deleteRoom(roomCode, userId);
+            return ResponseEntity.ok(Map.of("message", "Room deleted successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
 }

@@ -14,4 +14,5 @@ public interface RoomService {
     void updateRoomStatus(String roomCode, Long userId, RoomStatus status);
     List<Map<String, Object>> getRoomParticipantsRatings(String roomCode);
     int calculateProblemRating(String roomCode);
+    void deleteRoom(String roomCode, Long userId);
 }

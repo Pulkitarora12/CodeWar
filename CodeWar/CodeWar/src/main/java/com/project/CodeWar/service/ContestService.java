@@ -18,4 +18,6 @@ public interface ContestService {
     List<Map<String, Object>> getContestsByRoom(String roomCode);
 
     Map<String, Object> getContestDetails(Long contestId);
+
+    void deleteContest(Long contestId, Long userId);
 }

@@ -264,6 +264,10 @@ const Profile = () => {
                   </a>
                   , paste the token in the "First Name" field, and save.
                 </p>
+                <p className="cf-step-hint" style={{ color: "#eab308", marginTop: 8, display: "flex", gap: "6px" }}>
+                  <span>⚠️</span>
+                  <span>Codeforces API caches profiles. If verification fails immediately, please wait 1–2 minutes and try again.</span>
+                </p>
                 <p className="cf-step-label" style={{ marginTop: 16 }}>Step 3: Click verify</p>
                 <button
                   className="btn btn-primary"

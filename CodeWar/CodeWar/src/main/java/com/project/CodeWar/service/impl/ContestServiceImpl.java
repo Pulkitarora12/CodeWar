@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
@@ -49,6 +50,9 @@ public class ContestServiceImpl implements ContestService {
 
     @Autowired
     private RoomRepository roomRepository;
+
+    @Autowired
+    private RoomProblemRepository roomProblemRepository;
 
     @Autowired
     private CodeforcesService codeforcesService;
@@ -447,5 +451,46 @@ public class ContestServiceImpl implements ContestService {
                 .toList();
 
         return new LeaderboardResponse(contestId, entries, contest.getStatus().toString());
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = {"contests", "leaderboards"}, allEntries = true)
+    public void deleteContest(Long contestId, Long userId) {
+        logger.info("Deleting contestId: {} by userId: {}", contestId, userId);
+
+        Contest contest = contestRepository.findById(contestId)
+                .orElseThrow(() -> new RuntimeException("Contest not found"));
+
+        Room room = contest.getRoomProblem().getRoom();
+        if (!room.getCreatedBy().getUserId().equals(userId)) {
+            throw new RuntimeException("Only the room creator can delete contests from this room");
+        }
+
+        // If the contest is ACTIVE, reset room status to WAITING
+        if (contest.getStatus() == ContestStatus.ACTIVE) {
+            room.setStatus(RoomStatus.WAITING);
+            roomRepository.save(room);
+        }
+
+        // Delete associated submissions
+        List<Submission> submissions = submissionRepository.findByContest(contest);
+        submissionRepository.deleteAll(submissions);
+
+        // Delete associated scores
+        List<Score> scores = scoreRepository.findByContest(contest);
+        scoreRepository.deleteAll(scores);
+
+        RoomProblem roomProblem = contest.getRoomProblem();
+
+        // Delete the contest itself
+        contestRepository.delete(contest);
+
+        // Delete the room problem
+        if (roomProblem != null) {
+            roomProblemRepository.delete(roomProblem);
+        }
+
+        logger.info("Contest {} and its associated room problem deleted successfully", contestId);
     }
 }

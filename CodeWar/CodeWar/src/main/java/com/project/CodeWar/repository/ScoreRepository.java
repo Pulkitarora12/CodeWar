@@ -1,6 +1,7 @@
 package com.project.CodeWar.repository;
 
 import com.project.CodeWar.entity.Contest;
+import com.project.CodeWar.entity.Room;
 import com.project.CodeWar.entity.Score;
 import com.project.CodeWar.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,4 +18,6 @@ public interface ScoreRepository extends JpaRepository<Score, Long> {
     List<Score> findByContest(Contest contest);
 
     List<Score> findByContestId(Long contestId);
+
+    List<Score> findByRoom(Room room);
 }

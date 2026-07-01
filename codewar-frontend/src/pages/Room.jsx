@@ -5,7 +5,7 @@ import {
   updateRoomStatus,
   getRoomRatings,
 } from "../api/room";
-import { startContest, getContestsByRoom } from "../api/contest";
+import { startContest, getContestsByRoom, deleteContest } from "../api/contest";
 import { useAuth } from "../context/AuthContext";
 import ParticipantList from "../components/ParticipantList";
 
@@ -80,6 +80,18 @@ const Room = () => {
   };
 
 
+
+  const handleDeleteContest = async (contestId) => {
+    if (window.confirm("Are you sure you want to delete this contest and all of its leaderboard/submission records?")) {
+      setError("");
+      try {
+        await deleteContest(contestId);
+        fetchRoom();
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to delete contest.");
+      }
+    }
+  };
 
   const copyInviteLink = () => {
     const link = `${window.location.origin}/join?code=${roomCode}`;
@@ -224,18 +236,49 @@ const Room = () => {
                       className="problem-card"
                       style={{ marginBottom: "12px" }}
                     >
-                      <div className="problem-header">
-                        <h3 style={{ fontSize: "16px" }}>
+                      <div className="problem-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h3 style={{ fontSize: "16px", margin: 0 }}>
                           {contest.problemName}
                         </h3>
 
-                        <span
-                          className={`badge ${
-                            contest.status === "ACTIVE" ? "badge-active" : "badge-waiting"
-                          }`}
-                        >
-                          {contest.status === "ACTIVE" ? "ACTIVE" : `COMPLETED`}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span
+                            className={`badge ${
+                              contest.status === "ACTIVE" ? "badge-active" : "badge-waiting"
+                            }`}
+                          >
+                            {contest.status === "ACTIVE" ? "ACTIVE" : `COMPLETED`}
+                          </span>
+                          {isHost && (
+                            <button
+                              onClick={() => handleDeleteContest(contest.contestId)}
+                              title="Delete Contest"
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: "4px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "var(--error)",
+                                fontSize: "0.95rem",
+                                transition: "transform 0.2s ease, opacity 0.2s ease",
+                                borderRadius: "4px",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+                                e.currentTarget.style.transform = "scale(1.15)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "transparent";
+                                e.currentTarget.style.transform = "scale(1)";
+                              }}
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <p className="text-muted" style={{ fontSize: "13px" }}>

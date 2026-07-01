@@ -1,16 +1,15 @@
 package com.project.CodeWar.service.impl;
 
 import com.project.CodeWar.dtos.CfUser;
-import com.project.CodeWar.entity.Room;
-import com.project.CodeWar.entity.RoomStatus;
-import com.project.CodeWar.entity.User;
-import com.project.CodeWar.repository.RoomRepository;
+import com.project.CodeWar.entity.*;
+import com.project.CodeWar.repository.*;
 import com.project.CodeWar.service.CodeforcesService;
 import com.project.CodeWar.service.RoomService;
 import com.project.CodeWar.service.UserService;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.transaction.annotation.Transactional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +35,18 @@ public class RoomServiceImpl implements RoomService {
 
     @Autowired
     private CodeforcesService codeforcesService;
+
+    @Autowired
+    private ScoreRepository scoreRepository;
+
+    @Autowired
+    private ContestRepository contestRepository;
+
+    @Autowired
+    private SubmissionRepository submissionRepository;
+
+    @Autowired
+    private RoomProblemRepository roomProblemRepository;
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -210,9 +221,14 @@ public class RoomServiceImpl implements RoomService {
                     totalRating += cfUser.getRating();
                     count++;
                     logger.info("Participant: {} — rating: {}", participant.getUserName(), cfUser.getRating());
+                } else {
+                    totalRating += 0;
+                    count++;
                 }
             } catch (Exception e) {
                 logger.warn("Skipping participant {} — {}", participant.getUserName(), e.getMessage());
+                count++;
+                totalRating += 0;
             }
         }
 
@@ -223,8 +239,50 @@ public class RoomServiceImpl implements RoomService {
         int avgRating = totalRating / count;
         int problemRating = (int) (Math.round((avgRating) / 100.0) * 100);
         problemRating = Math.min(problemRating, 3000);
+        problemRating = Math.max(problemRating, 800);
 
         logger.info("Avg rating: {}, Problem rating calculated: {}", avgRating, problemRating);
         return problemRating;
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = "rooms", allEntries = true)
+    public void deleteRoom(String roomCode, Long userId) {
+        logger.info("Deleting room {} by user {}", roomCode, userId);
+        Room room = roomRepository.findByRoomCode(roomCode)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+
+        if (!room.getCreatedBy().getUserId().equals(userId)) {
+            throw new RuntimeException("Only the room creator can delete this room");
+        }
+
+        // 1. Delete all scores associated with this room
+        List<Score> scores = scoreRepository.findByRoom(room);
+        scoreRepository.deleteAll(scores);
+
+        // 2. Delete all contests (and their submissions & scores) of this room
+        List<Contest> contests = contestRepository.findByRoomProblem_RoomOrderByStartTimeDesc(room);
+        for (Contest contest : contests) {
+            List<Submission> submissions = submissionRepository.findByContest(contest);
+            submissionRepository.deleteAll(submissions);
+
+            List<Score> contestScores = scoreRepository.findByContest(contest);
+            scoreRepository.deleteAll(contestScores);
+
+            contestRepository.delete(contest);
+        }
+
+        // 3. Delete all room problems
+        List<RoomProblem> roomProblems = roomProblemRepository.findByRoom(room);
+        roomProblemRepository.deleteAll(roomProblems);
+
+        // 4. Clear participants to remove associations in the join table
+        room.getParticipants().clear();
+        roomRepository.save(room);
+
+        // 5. Finally, delete the room
+        roomRepository.delete(room);
+        logger.info("Room {} deleted successfully", roomCode);
     }
 }

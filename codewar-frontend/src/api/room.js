@@ -39,3 +39,7 @@ export const getRoomProblems = (roomCode) => {
 export const getCurrentProblem = (roomCode) => {
   return api.get(`/api/room/${roomCode}/current-problem`);
 };
+
+export const deleteRoom = (roomCode) => {
+  return api.delete(`/api/room/${roomCode}`);
+};

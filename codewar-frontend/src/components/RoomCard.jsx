@@ -1,7 +1,10 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { deleteRoom } from "../api/room";
 
-const RoomCard = ({ room }) => {
+const RoomCard = ({ room, onDeleteSuccess }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const getStatusBadge = (status) => {
     const statusMap = {
@@ -18,6 +21,30 @@ const RoomCard = ({ room }) => {
   const createdAt = room.createdAt || room.created_at;
   const participantCount = room.participants?.length ?? "—";
 
+  const isCreator =
+    user &&
+    room.createdBy &&
+    (typeof room.createdBy === "string"
+      ? room.createdBy === user.username || room.createdBy === user.userName
+      : room.createdBy.userName === user.userName ||
+        room.createdBy.username === user.username ||
+        room.createdBy.userName === user.username ||
+        room.createdBy.username === user.userName);
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    if (window.confirm(`Are you sure you want to delete room ${roomCode}?`)) {
+      try {
+        await deleteRoom(roomCode);
+        if (onDeleteSuccess) {
+          onDeleteSuccess();
+        }
+      } catch (err) {
+        alert(err.response?.data?.message || "Failed to delete room.");
+      }
+    }
+  };
+
   return (
     <div
       className="room-card"
@@ -28,7 +55,38 @@ const RoomCard = ({ room }) => {
     >
       <div className="room-card-header">
         <span className="room-code">{roomCode}</span>
-        {getStatusBadge(status)}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {getStatusBadge(status)}
+          {isCreator && (
+            <button
+              onClick={handleDelete}
+              title="Delete Room"
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "4px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--error)",
+                fontSize: "0.95rem",
+                transition: "transform 0.2s ease, opacity 0.2s ease",
+                borderRadius: "4px",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+                e.currentTarget.style.transform = "scale(1.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.transform = "scale(1)";
+              }}
+            >
+              🗑️
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="room-card-body">

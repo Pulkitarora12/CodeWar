@@ -23,3 +23,7 @@ export const getContestsByRoom = (roomCode) => {
 export const getContestDetails = (contestId) => {
   return api.get(`/api/contest/${contestId}/details`);
 };
+
+export const deleteContest = (contestId) => {
+  return api.delete(`/api/contest/${contestId}`);
+};

@@ -87,7 +87,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Cacheable(cacheNames = "users", key = "'username::' +  #username")
     public User findByUsername(String username) {
         logger.info("Database hit: Fetching User by username: {}", username);
         Optional<User> user = userRepository.findByUserName(username);
@@ -95,14 +94,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Cacheable(cacheNames = "users", key = "'email::' + #email")
     public Optional<User> findByEmail(String email) {
         logger.info("Database hit: Fetching User by email: {}", email);
         return userRepository.findByEmail(email);
     }
 
     @Override
-    @Cacheable(cacheNames = "users", key = "'id::' + #id")
     public User getUserEntityById(Long id) {
         logger.info("Database hit: Fetching User entity for id: {}", id);
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));

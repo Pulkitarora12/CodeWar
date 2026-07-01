@@ -87,7 +87,11 @@ const Dashboard = () => {
         ) : (
           <div className="rooms-grid">
             {rooms.map((room, idx) => (
-              <RoomCard key={room.roomCode || room.room_code || idx} room={room} />
+              <RoomCard
+                key={room.roomCode || room.room_code || idx}
+                room={room}
+                onDeleteSuccess={fetchRooms}
+              />
             ))}
           </div>
         )}

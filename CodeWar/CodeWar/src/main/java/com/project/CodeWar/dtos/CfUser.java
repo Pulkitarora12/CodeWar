@@ -9,6 +9,7 @@ public class CfUser implements java.io.Serializable {
     private static final long serialVersionUID = 1L;
     private String handle;
     private String firstName;
+    private String lastName;
     private Integer rating;
     private String rank;
     private Integer maxRating;

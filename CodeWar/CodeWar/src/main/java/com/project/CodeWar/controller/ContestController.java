@@ -2,6 +2,7 @@ package com.project.CodeWar.controller;
 
 import com.project.CodeWar.dtos.LeaderboardResponse;
 import com.project.CodeWar.service.ContestService;
+import com.project.CodeWar.security.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -25,6 +26,9 @@ public class ContestController {
 
     @Autowired
     private ContestService contestService;
+
+    @Autowired
+    private AuthUtil authUtil;
 
     @Operation(summary = "Start contest for a room")
     @ApiResponses({
@@ -105,6 +109,24 @@ public class ContestController {
         } catch (RuntimeException e) {
             logger.error("Error fetching contest details for {}: {}", contestId, e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "Delete a contest")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Contest deleted successfully"),
+            @ApiResponse(responseCode = "403", description = "Not authorized"),
+            @ApiResponse(responseCode = "404", description = "Contest not found")
+    })
+    @DeleteMapping("/{contestId}")
+    public ResponseEntity<?> deleteContest(@PathVariable Long contestId) {
+        try {
+            Long userId = authUtil.loggedInUserId();
+            contestService.deleteContest(contestId, userId);
+            return ResponseEntity.ok(Map.of("message", "Contest deleted successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", e.getMessage()));
         }
     }
