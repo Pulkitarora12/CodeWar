@@ -17,6 +17,9 @@ import org.springframework.web.client.RestTemplate;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +28,14 @@ import java.util.UUID;
 public class CodeforcesServiceImpl implements CodeforcesService {
 
     private static final Logger logger = LoggerFactory.getLogger(CodeforcesServiceImpl.class);
+
+    @Autowired
+    @Lazy
+    private CodeforcesService self;
+
+    private CfProblemsetResponse l1Cache = null;
+    private long l1CacheExpiry = 0;
+    private static final long L1_TTL = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
 
     @Autowired
     private UserRepository userRepository;
@@ -172,9 +183,52 @@ public class CodeforcesServiceImpl implements CodeforcesService {
     }
 
     @Override
-    @Cacheable(cacheNames = "cfProblemset", key = "'all'")
     public CfProblemsetResponse getProblemset() {
-        logger.info("Hitting CF problemset API");
+        long now = System.currentTimeMillis();
+        if (l1Cache != null && now < l1CacheExpiry) {
+            logger.info("Returning CF problemset from L1 cache (in-memory)");
+            return l1Cache;
+        }
+
+        logger.info("L1 cache miss or expired. Fetching CF problemset from Redis/API...");
+        CfProblemsetResponse response = self.getProblemsetFromRedis();
+        if (response != null && "OK".equals(response.getStatus())) {
+            l1Cache = response;
+            l1CacheExpiry = now + L1_TTL;
+        }
+        return response;
+    }
+
+    @Override
+    @Cacheable(cacheNames = "cfProblemset", key = "'all'")
+    public CfProblemsetResponse getProblemsetFromRedis() {
+        logger.info("Hitting CF problemset API (Redis cache miss)");
         return restTemplate.getForObject(CF_PROBLEMSET_URL, CfProblemsetResponse.class);
     }
+
+    @Override
+    @CachePut(cacheNames = "cfProblemset", key = "'all'")
+    public CfProblemsetResponse updateProblemsetInRedis(CfProblemsetResponse response) {
+        logger.info("Updating CF problemset in Redis cache");
+        return response;
+    }
+
+    @Scheduled(fixedRate = 14400000, initialDelay = 1000)
+    public void refreshProblemsetCache() {
+        logger.info("Scheduled task: refreshing Codeforces problemset cache...");
+        try {
+            CfProblemsetResponse response = restTemplate.getForObject(CF_PROBLEMSET_URL, CfProblemsetResponse.class);
+            if (response != null && "OK".equals(response.getStatus())) {
+                self.updateProblemsetInRedis(response);
+                l1Cache = response;
+                l1CacheExpiry = System.currentTimeMillis() + L1_TTL;
+                logger.info("CF problemset cache refreshed successfully in background");
+            } else {
+                logger.warn("Failed to refresh CF problemset: invalid response status");
+            }
+        } catch (Exception e) {
+            logger.error("Error refreshing CF problemset cache: {}", e.getMessage(), e);
+        }
+    }
 }
+

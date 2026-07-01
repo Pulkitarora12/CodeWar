@@ -173,7 +173,9 @@ public class ContestServiceImpl implements ContestService {
         Optional<Submission> existingSubmission = submissionRepository.findByContestAndUser(contest, user);
         if (existingSubmission.isPresent() && existingSubmission.get().isSolved()) {
             Submission sub = existingSubmission.get();
-            int existingScore = Math.max(0, 100 - (sub.getFailedAttempts() * 5));
+            int existingScore = scoreRepository.findByContestAndUser(contest, user)
+                    .map(Score::getScore)
+                    .orElse(0);
 
             Map<String, Object> response = new HashMap<>();
             response.put("solved", true);
@@ -246,10 +248,13 @@ public class ContestServiceImpl implements ContestService {
 
             long acEpoch = acSubmission.get().getCreationTimeSeconds();
             long timeTaken = acEpoch - contestStartEpoch;
-            submission.setTimeTakenSeconds(Math.max(timeTaken, 0));
+            long timeTakenSeconds = Math.max(timeTaken, 0);
+            submission.setTimeTakenSeconds(timeTakenSeconds);
 
             // Persistence: Official score record
-            score = Math.max(0, 100 - (failedAttempts * 5));
+            int baseScore = Math.max(0, 100 - (failedAttempts * 5));
+            long minutesTaken = timeTakenSeconds / 60;
+            score = Math.max(0, baseScore - (int) minutesTaken);
             saveScore(contest, user, score);
 
             // Real-time Update: WebSocket Broadcast
@@ -287,8 +292,10 @@ public class ContestServiceImpl implements ContestService {
         Map<String, Object> result = new HashMap<>();
         result.put("solved", solved);
         result.put("failedAttempts", failedAttempts);
-        result.put("timeTakenSeconds", submission.getTimeTakenSeconds() != null ? submission.getTimeTakenSeconds() : 0);
-        result.put("score", solved ? Math.max(0, 100 - (failedAttempts * 5)) : 0);
+        long finalTimeTakenSeconds = submission.getTimeTakenSeconds() != null ? submission.getTimeTakenSeconds() : 0;
+        result.put("timeTakenSeconds", finalTimeTakenSeconds);
+        int finalScore = solved ? Math.max(0, (100 - (failedAttempts * 5)) - (int)(finalTimeTakenSeconds / 60)) : 0;
+        result.put("score", finalScore);
 
         return result;
     }

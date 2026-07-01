@@ -14,4 +14,6 @@ public interface CodeforcesService {
     CfUser getUserRatingByUserId(Long userId);
     List<CfSubmission> getRecentSubmissions(String handle, int count);
     CfProblemsetResponse getProblemset();
+    CfProblemsetResponse getProblemsetFromRedis();
+    CfProblemsetResponse updateProblemsetInRedis(CfProblemsetResponse response);
 }
